@@ -1,0 +1,19 @@
+# gitleaks configuration for the publication scan (.github/workflows/publish.yml)
+# and for anyone scanning a checkout. Extends the default rules; the allowlist
+# only covers test fixtures, which carry made-up passwords and keys by design.
+title = "Kollepedia"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures and documentation examples are not secrets"
+paths = [
+  '''server/tests/.*''',
+  '''web/src/.*\.test\.ts''',
+  '''web/src/routes/manual/content\.ts''',
+]
+regexes = [
+  '''sk-ant-(…|abc123)''',
+  '''smtp://user:pass(word)?@''',
+]

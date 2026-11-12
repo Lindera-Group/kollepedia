@@ -1,0 +1,234 @@
+# Deploy Kollepedia NG to STAGING.
+#
+# Manual trigger → tests → the environment's identity is written into the
+# server's .env from repository variables → rsync source to /opt/<APP_NAME> on
+# the VPS → `docker compose up -d --build` (both images are built on the VPS)
+# → external health check and smoke test. Migrations run inside the server
+# container at start.
+#
+# Repository secrets: VPS_HOST, VPS_SSH_KEY, VPS_KNOWN_HOSTS.
+# Repository variables: STAGING_URL (public origin, e.g. https://staging.example.se)
+# and optionally STAGING_ALIAS_RULE (Traefik rule for alias host names).
+# Secrets that belong to the environment (JWT_SECRET, mail) live only in the
+# server's .env, which this workflow never overwrites.
+
+name: Deploy to Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to deploy"
+        required: true
+        type: string
+        default: master
+      db_mode:
+        description: "Database mode for staging"
+        required: true
+        type: choice
+        default: keep
+        options:
+          - keep
+          - seed
+
+permissions:
+  contents: read
+
+env:
+  APP_NAME: kollepedia-staging
+  PUBLIC_URL: ${{ vars.STAGING_URL }}
+  ALIAS_RULE: ${{ vars.STAGING_ALIAS_RULE }}
+
+jobs:
+  # Inline test job: ci.yml has no workflow_call trigger, so it cannot be
+  # reused here without modifying it.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+        working-directory: server
+      - run: uv run ruff check app scripts tests
+        working-directory: server
+      - run: uv run pytest -q
+        working-directory: server
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run check
+        working-directory: web
+      - run: npm test
+        working-directory: web
+
+  prepare-db:
+    needs: test
+    if: ${{ inputs.db_mode == 'seed' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Seed — clear staging database
+        run: |
+          ssh root@${{ secrets.VPS_HOST }} "bash -s" <<EOF
+          set -e
+          if [ -d /opt/$APP_NAME ]; then
+            cd /opt/$APP_NAME
+            docker compose -f docker-compose.deploy.yml stop server 2>/dev/null || true
+          fi
+          # The DB lives in a named volume, not a bind mount — clear it via a
+          # throwaway container.
+          docker run --rm -v $APP_NAME-data:/data alpine sh -c 'rm -f /data/kollepedia.db' 2>/dev/null || true
+          echo "Staging database cleared. A fresh (empty) DB is created on startup."
+          EOF
+
+  deploy:
+    needs: [test, prepare-db]
+    # prepare-db is skipped when db_mode=keep — still deploy in that case.
+    if: >-
+      ${{ !cancelled() && needs.test.result == 'success' &&
+          (needs.prepare-db.result == 'success' || needs.prepare-db.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Require the environment's public URL
+        run: |
+          test -n "$PUBLIC_URL" || { echo "::error::Repository variable STAGING_URL is not set"; exit 1; }
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Write the environment identity into .env
+        run: |
+          # APP_NAME, PUBLIC_HOST, PUBLIC_ORIGIN and ALIAS_HOSTS_RULE come from
+          # this workflow's variables; everything else in .env (secrets) is
+          # left alone. Values travel shell-quoted (%q) so a Traefik rule with
+          # backticks and || survives the remote shell untouched.
+          HOST="${PUBLIC_URL#https://}"; HOST="${HOST%%/*}"
+          {
+            printf 'APP=%q HOST=%q ORIGIN=%q ALIAS=%q\n' "$APP_NAME" "$HOST" "$PUBLIC_URL" "$ALIAS_RULE"
+            cat <<'SCRIPT'
+          set -e
+          ENV="/opt/$APP/.env"
+          test -f "$ENV" || { echo "::error::/opt/$APP/.env is missing — create it from .env.example first"; exit 1; }
+          put() { sed -i "/^$1=/d" "$ENV"; printf '%s=%s\n' "$1" "$2" >> "$ENV"; }
+          put APP_NAME "$APP"
+          put PUBLIC_HOST "$HOST"
+          put PUBLIC_ORIGIN "$ORIGIN"
+          if [ -n "$ALIAS" ]; then put ALIAS_HOSTS_RULE "$ALIAS"; else sed -i '/^ALIAS_HOSTS_RULE=/d' "$ENV"; fi
+          echo "Environment identity written: APP_NAME=$APP PUBLIC_HOST=$HOST"
+          SCRIPT
+          } | ssh root@${{ secrets.VPS_HOST }} bash -s
+
+      - name: Rsync source to VPS
+        run: |
+          rsync -avz --checksum --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.claude' \
+            --exclude='.design-sync' \
+            --exclude='.remember' \
+            --exclude='.obsidian' \
+            --exclude='node_modules' \
+            --exclude='.venv' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.env' \
+            --exclude='server/data' \
+            --exclude='web/build' \
+            --exclude='web/.svelte-kit' \
+            --exclude='web/test-results' \
+            ./ root@${{ secrets.VPS_HOST }}:/opt/$APP_NAME/
+
+      - name: Build and start on VPS
+        run: |
+          # docker-compose.alias.yml is added only when .env defines ALIAS_HOSTS_RULE.
+          ssh root@${{ secrets.VPS_HOST }} "bash -s" <<EOF
+          set -e
+          cd /opt/$APP_NAME
+          FILES="-f docker-compose.deploy.yml"
+          if grep -q '^ALIAS_HOSTS_RULE=' .env; then FILES="\$FILES -f docker-compose.alias.yml"; fi
+          docker compose \$FILES config -q
+          docker compose \$FILES up -d --build
+          EOF
+
+      - name: Verify deployment
+        run: |
+          # Traefik only routes a container once its Docker healthcheck flips
+          # from `starting` to `healthy` (~30-60s after compose up), so poll
+          # for up to 2 minutes instead of a fixed sleep.
+          HEALTH_URL="$PUBLIC_URL/health"
+          for i in $(seq 1 24); do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Health check passed (HTTP $HTTP_CODE) after $((i * 5))s"
+              exit 0
+            fi
+            echo "Waiting for staging to become healthy (attempt $i/24, HTTP $HTTP_CODE)"
+            sleep 5
+          done
+          echo "Health check FAILED (last HTTP $HTTP_CODE) at $HEALTH_URL"
+          exit 1
+
+      - name: Smoke test the rendered site
+        run: |
+          # The health endpoint only proves the API container answers. Render
+          # the start page, the collections page and one concept page through
+          # the node server too: a runtime image missing a dependency fails
+          # exactly here (SSR import error → 500) while /health stays green.
+          BASE="$PUBLIC_URL"
+          ID=$(curl -s --max-time 15 "$BASE/api/v1/concepts?limit=1" | jq -r '(.items // .)[0].id')
+          test -n "$ID" && [ "$ID" != "null" ] || { echo "::error::No concept found via $BASE/api/v1/concepts"; exit 1; }
+          FAIL=0
+          for P in / /collections "/concepts/$ID"; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$BASE$P" || echo "000")
+            if [ "$CODE" = "200" ]; then echo "OK   $P"; else echo "::error::$P answered HTTP $CODE"; FAIL=1; fi
+          done
+          # The public MCP endpoint answers JSON-RPC straight from the API container.
+          TOOLS=$(curl -s --max-time 20 -X POST "$BASE/mcp" \
+            -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | grep -o '"name":"[a-z_]*"' | wc -l)
+          if [ "$TOOLS" -ge 5 ]; then echo "OK   /mcp ($TOOLS tools)"; else echo "::error::/mcp did not list its tools"; FAIL=1; fi
+          exit $FAIL
+
+  post-deploy:
+    needs: deploy
+    if: ${{ !cancelled() && needs.deploy.result == 'success' && inputs.db_mode == 'seed' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      # Best-effort demo data. build_showcase.py expects a database migrated
+      # from the prototype, which a fresh volume does not have — so this may
+      # only partially succeed. A fully populated staging DB is copied up by
+      # hand (docs/DRIFT.md).
+      - name: Seed showcase data (best effort)
+        run: |
+          ssh root@${{ secrets.VPS_HOST }} "bash -s" <<EOF
+          sleep 5
+          docker exec $APP_NAME-server python scripts/build_showcase.py \
+            || echo "Showcase seed skipped/failed (expected without a migrated prototype DB)."
+          EOF

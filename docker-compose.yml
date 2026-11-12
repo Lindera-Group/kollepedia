@@ -1,0 +1,17 @@
+# Dev Postgres for Kollepedia NG (optional — SQLite is the zero-config default).
+# Usage: docker compose up -d postgres
+#        DATABASE_URL=postgresql+psycopg://kollepedia:kollepedia@localhost:5433/kollepedia
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: kollepedia
+      POSTGRES_PASSWORD: kollepedia
+      POSTGRES_DB: kollepedia
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

@@ -1,0 +1,126 @@
+# Kollepedia NG — the deployed stack, one file for every environment.
+#
+# Two containers behind a Traefik v2 reverse proxy (external network
+# `traefik-proxy`, certresolver `letsencrypt`). The web container (SvelteKit
+# SSR, adapter-node) renders the public read path and proxies /api + /health to
+# the server container, so app and API are same-origin and no host ports are
+# published. The server container also answers /ws (realtime relay) and /mcp
+# (public MCP) directly, through routers of its own.
+#
+# Everything environment-specific comes from the `.env` next to this file
+# (see .env.example): APP_NAME names the compose project, containers, data
+# volume, networks and Traefik routers; PUBLIC_HOST / PUBLIC_ORIGIN are the
+# public address; JWT_SECRET and the mail settings are the secrets. Add
+# docker-compose.alias.yml when alias host names should redirect here.
+
+name: ${APP_NAME:-kollepedia}
+
+services:
+  server:
+    build: ./server
+    container_name: ${APP_NAME:-kollepedia}-server
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/kollepedia.db
+      - DEV_AUTH=0
+      - CORS_ORIGINS=${PUBLIC_ORIGIN:?set PUBLIC_ORIGIN in .env}
+      - PUBLIC_ORIGIN=${PUBLIC_ORIGIN:?set PUBLIC_ORIGIN in .env}
+      - FEATURE_AI=${FEATURE_AI:-0}
+    volumes:
+      - data:/app/data
+    networks:
+      - default
+      - traefik-proxy
+    labels:
+      # Realtime collab (Yjs): /ws must reach the API service directly with
+      # websocket upgrade — the SSR proxy only forwards /api + /health.
+      # Traefik prefers this router over the web router (longer rule wins).
+      - "traefik.enable=true"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-ws.rule=Host(`${PUBLIC_HOST:?set PUBLIC_HOST in .env}`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-ws.entrypoints=websecure"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.services.${APP_NAME:-kollepedia}-ws.loadbalancer.server.port=8088"
+      # Public MCP endpoint (app/mcp_public.py): same service, plain HTTP.
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-mcp.rule=Host(`${PUBLIC_HOST:?set PUBLIC_HOST in .env}`) && PathPrefix(`/mcp`)"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-mcp.entrypoints=websecure"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-mcp.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-mcp.service=${APP_NAME:-kollepedia}-ws"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+
+  web:
+    build: ./web
+    container_name: ${APP_NAME:-kollepedia}-web
+    depends_on:
+      - server
+    environment:
+      # SSR loads + the /api proxy in hooks.server.ts hit FastAPI here.
+      - API_URL=http://server:8088
+      # adapter-node needs the public origin for correct absolute URLs/CSRF.
+      - ORIGIN=${PUBLIC_ORIGIN:?set PUBLIC_ORIGIN in .env}
+      # Import uploads pass through the node proxy.
+      - BODY_SIZE_LIMIT=25M
+      # Traefik appends the real client to X-Forwarded-For; adapter-node must
+      # read it (one trusted hop) so the API proxy forwards the real address
+      # and rate limits are per visitor, not per container.
+      - ADDRESS_HEADER=X-Forwarded-For
+      - XFF_DEPTH=1
+      # Feature flags (lib/features.ts) — same variables as the server.
+      - FEATURE_AI=${FEATURE_AI:-0}
+    networks:
+      - default
+      - traefik-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}.rule=Host(`${PUBLIC_HOST:?set PUBLIC_HOST in .env}`)"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}.entrypoints=websecure"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}.tls.certresolver=letsencrypt"
+      # Response compression happens in Traefik (adapter-node does not compress).
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-compress.compress=true"
+      # Security headers for every response through this router (the CSP is
+      # set per response by SvelteKit itself, see web/svelte.config.js).
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-headers.headers.customResponseHeaders.Permissions-Policy=camera=(), microphone=(), geolocation=()"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}.middlewares=${APP_NAME:-kollepedia}-compress,${APP_NAME:-kollepedia}-headers"
+      - "traefik.http.services.${APP_NAME:-kollepedia}.loadbalancer.server.port=3000"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+
+  # Optional Postgres, off by default; activate with `--profile postgres` and
+  # point DATABASE_URL on the server service at it. See docs/DRIFT.md for the
+  # caveats (driver and migrations are SQLite-only today).
+  postgres:
+    profiles: ["postgres"]
+    image: postgres:17-alpine
+    container_name: ${APP_NAME:-kollepedia}-postgres
+    environment:
+      POSTGRES_USER: kollepedia
+      # Set a real POSTGRES_PASSWORD in .env when enabling this profile — the
+      # fallback exists only so compose can parse the file with the profile off.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: kollepedia
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  data:
+    name: ${APP_NAME:-kollepedia}-data
+  pgdata:
+    name: ${APP_NAME:-kollepedia}-pgdata
+
+networks:
+  default:
+    name: ${APP_NAME:-kollepedia}-network
+    driver: bridge
+  traefik-proxy:
+    external: true

@@ -1,0 +1,676 @@
+/* ─── Kollepedia NG design system ────────────────────────────────────────────
+   Editorial warm-paper identity. Content in Crimson Pro (serif), UI in
+   Familjen Grotesk (Swedish foundry), metadata in Fragment Mono.
+   Themes: light (paper) / dark (night desk) / contrast (WCAG AAA-leaning). */
+
+:root {
+  /* Crimson Pro per designkontraktet v1.1 (Martins revision 2026-07-14 efter
+     att ha sett Georgia live – Crimson bär identiteten, nu i höjd läsyteskala). */
+  --font-serif: 'Crimson Pro Variable', 'Crimson Pro', Georgia, serif;
+  --font-sans: 'Familjen Grotesk Variable', 'Familjen Grotesk', -apple-system, sans-serif;
+  --font-mono: 'Fragment Mono', ui-monospace, Menlo, monospace;
+
+  /* Type scale (inherited from the prototype, + display sizes) */
+  --text-2xs: 0.7rem;   /* micro-labels: count badges, bell counts, dense tables */
+  --text-xs: 0.75rem;
+  --text-sm: 0.9375rem;   /* 15px – kontraktets princip 3 (2026-07-13) */
+  --text-base: 1.125rem;  /* 18px läsbas – kontraktets princip 3 */
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.2rem;
+  --text-display: clamp(2.6rem, 6vw, 4.2rem);
+  --text-body-lg: 1.25rem; /* 20px långtext – kontraktets princip 3 */
+  /* Brand-only: the header wordmark. Sits above h1 (--text-2xl) so page
+     titles never compete with the logotype, and scales fluidly so mobile
+     never dwarfs it (Martins beslut 2026-07-12/13: 2.5rem var för stor,
+     mobilens 1.25rem för liten). */
+  --text-brand: clamp(1.7rem, 1.2rem + 1.6vw, 2.35rem);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-pill: 999px; /* pills, chips, count badges */
+  --radius-round: 50%;  /* icon buttons, avatars, dots */
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+[data-theme='light'], :root {
+  --bg: #f6f2ea;
+  --bg-raised: #fdfbf6;
+  --bg-sunken: #ede7da;
+  --ink: #211c15;
+  --ink-2: #52493c;
+  --ink-3: #736a5c;
+  --line: #ddd4c3;
+  --line-strong: #211c15;
+  --accent: #24439c;
+  --accent-soft: rgba(36, 67, 156, 0.09);
+  --on-accent: #fdfbf6;
+  --focus: rgba(36, 67, 156, 0.35);
+
+  /* Diff palette — the Time Machine's semantics */
+  --del-wash: rgba(171, 42, 33, 0.17);
+  --del-strong: #a03028;
+  --del-ink: #93887a;
+  --ins-wash: rgba(23, 118, 62, 0.16);
+  --ins-strong: #17763e;
+  --blame-wash: rgba(33, 28, 21, 0.09);
+  --endorsed: #8a6d1c;
+  --sepia: #b39a68;
+  /* Samlingsscope (kontraktstillägg 2026-07-15, v1:s typfärger): org-interna
+     samlingar bär amber — skild från endorsement-guldet, aldrig dekoration. */
+  --scope-org-wash: rgba(212, 150, 10, 0.16);
+  --scope-org-ink: #7e3d05;
+
+  --shadow-sm: 0 1px 4px rgba(33, 28, 21, 0.08);
+  --shadow-md: 0 6px 24px rgba(33, 28, 21, 0.11);
+  --grain-opacity: 0.5;
+}
+
+[data-theme='dark'] {
+  --bg: #161310;
+  --bg-raised: #201c17;
+  --bg-sunken: #100e0b;
+  --ink: #ebe4d6;
+  --ink-2: #bdb3a1;
+  --ink-3: #94897a;
+  --line: #37312a;
+  --line-strong: #ebe4d6;
+  --accent: #93a9f2;
+  --accent-soft: rgba(147, 169, 242, 0.13);
+  --on-accent: #10131f;
+  --focus: rgba(147, 169, 242, 0.45);
+
+  --del-wash: rgba(224, 92, 82, 0.24);
+  --del-strong: #e0745f;
+  --del-ink: #7d7466;
+  --ins-wash: rgba(74, 190, 120, 0.22);
+  --ins-strong: #5fcd8b;
+  --blame-wash: rgba(235, 228, 214, 0.1);
+  --endorsed: #d4b254;
+  --sepia: #7a6a4d;
+  --scope-org-wash: rgba(227, 164, 79, 0.18);
+  --scope-org-ink: #e3a44f;
+
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.5);
+  --grain-opacity: 0.35;
+}
+
+[data-theme='contrast'] {
+  --bg: #ffffff;
+  --bg-raised: #ffffff;
+  --bg-sunken: #f0f0f0;
+  --ink: #000000;
+  --ink-2: #1a1a1a;
+  --ink-3: #3d3d3d;
+  --line: #000000;
+  --line-strong: #000000;
+  --accent: #0000c7;
+  --accent-soft: rgba(0, 0, 199, 0.1);
+  --on-accent: #ffffff;
+  --focus: #0000c7;
+
+  --del-wash: rgba(200, 0, 0, 0.22);
+  --del-strong: #b00000;
+  --del-ink: #555555;
+  --ins-wash: rgba(0, 130, 40, 0.22);
+  --ins-strong: #006622;
+  --blame-wash: rgba(0, 0, 0, 0.14);
+  --endorsed: #6b5300;
+  --sepia: #8a6d33;
+  --scope-org-wash: rgba(122, 57, 0, 0.12);
+  --scope-org-ink: #7a3900;
+
+  --shadow-sm: none;
+  --shadow-md: none;
+  --grain-opacity: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font-serif);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  background-color: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.25s, color 0.25s;
+}
+
+/* Paper grain — atmosphere without weight (pure CSS, no asset) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: calc(var(--grain-opacity) * 0.06);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  font-weight: 560;
+  line-height: 1.15;
+  margin: 0 0 var(--space-4);
+  letter-spacing: -0.01em;
+}
+
+/* Heading scale — the ONE source of page heading sizes. Sanctioned scoped
+   overrides only: home hero (--text-display), card-title h2 (--text-lg),
+   auth-card/guard h1 (--text-xl), label-style h2 (--text-xs uppercase). */
+h1 {
+  font-size: var(--text-2xl);
+}
+
+h2 {
+  font-size: var(--text-xl);
+}
+
+h3 {
+  font-size: var(--text-lg);
+}
+
+@media (max-width: 640px) {
+  h1 {
+    font-size: var(--text-xl);
+  }
+
+  h2 {
+    font-size: var(--text-lg);
+  }
+}
+
+p {
+  margin: 0 0 var(--space-4);
+}
+
+a {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color 0.15s;
+}
+
+a:hover {
+  text-decoration-color: var(--accent);
+}
+
+button, input, select, textarea {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ── Shared primitives ── */
+
+.ui {
+  font-family: var(--font-sans);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+}
+
+/* Screen reader only — visually hidden but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip link — visible on focus for keyboard users (WCAG 2.4.1).
+   z-index above the grain overlay (1000) and the sticky header. */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--space-4);
+  z-index: 1100;
+  padding: var(--space-3) var(--space-6);
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  transition: top 0.15s var(--ease-out);
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+/* The only sanctioned width variant: narrow (account/auth flows).
+   Never invent per-page widths. (.container.wide avvecklad 2026-07-14 –
+   designkontraktets princip 8: jämförelsevyn ligger i standardbredd och
+   låter enbart kolumnrullaren breda ut sig via .full-bleed.) */
+.container.narrow {
+  max-width: 640px;
+}
+
+/* ── Full-bleed breakout — THE way for a component inside .container to use
+   the whole viewport width (kontraktets princip 8: jämförelsevyns
+   kolumnrullare). Grows from center outward; the inner element owns its own
+   horizontal scrolling. ── */
+.full-bleed {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
+/* Breadcrumb — one definition; pages may add layout (flex) but not
+   re-declare size/rhythm. */
+.breadcrumb {
+  margin-bottom: var(--space-6);
+  font-size: var(--text-sm);
+}
+
+.btn {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  /* Buttons and anchor-buttons must compute the same height — anchors would
+     otherwise inherit the body's 1.6 line-height (2026-07-12). */
+  line-height: 1.45;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  border-radius: var(--radius-md);
+  padding: 0.55em 1.1em;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, transform 0.1s;
+}
+
+.btn:hover {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--accent) 85%, var(--ink));
+  color: var(--on-accent);
+}
+
+.btn-quiet {
+  border-color: transparent;
+}
+
+.btn-quiet:hover {
+  background: var(--bg-sunken);
+  color: var(--ink);
+}
+
+.btn-danger {
+  border-color: var(--del-strong);
+  color: var(--del-strong);
+}
+
+.btn-danger:hover {
+  background: var(--del-strong);
+  color: var(--bg);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius-round);
+}
+
+/* ── Form primitives — THE input recipe (2026-07-12). Before this class the
+   identical recipe was copy-pasted 41 times; the design guard now bans bare
+   input/textarea/select styling in components. Layout (width, min-height,
+   resize) stays local — the primitive owns look, not layout. ── */
+.input {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+textarea.input {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* The uppercase form label (ui-guardrails §1) — one definition. */
+.field-label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-1);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.015em;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 0.22em 0.75em;
+  background: var(--bg-raised);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+/* Sifferbadge — the ONE way to render a count (buttons, lists, header bell).
+   Mono digits on a soft plate; .unread = green (unseen activity). */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: var(--radius-pill);
+  padding: 0.05em 0.5em;
+  white-space: nowrap;
+}
+
+.count-badge.unread {
+  background: color-mix(in srgb, var(--ins-strong) 15%, transparent);
+  color: var(--ins-strong);
+}
+
+/* ── Anchor-as-button: .btn on <a> must read exactly like a button — the
+   global link underline never applies. ── */
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  text-decoration: none;
+}
+
+/* ── Tool subview — THE disclosure panel under a toolbar button (ng-ui-
+   guardrails §16): one box, one heading style, one hint style, one action
+   row. Every panel a button opens uses these classes; never bespoke. ── */
+.subview {
+  max-width: 70ch;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  /* Airy by design (2026-07-12): clear separation from the toolbar above and
+     generous inner padding — the panels read as calm work surfaces. */
+  padding: var(--space-6);
+  margin: var(--space-4) 0 var(--space-8);
+}
+
+.subview-h {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 var(--space-2);
+}
+
+.subview-hint {
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+  max-width: 60ch;
+  margin: 0 0 var(--space-4);
+  line-height: 1.6;
+}
+
+.subview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* ── Shared filter chip (Bengt deep-review: one chip variant) — used by the
+   home search filters and the collection page's tag row alike. Active state
+   keys off aria-pressed. ── */
+.filter-chip {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 0.28em 0.85em;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.filter-chip:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.filter-chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ── Shared concept-card grid (identical local copies removed from home,
+   collection page etc.). ── */
+/* ── Curated vs free classification (2026-07-12 concept-page cleanup):
+   categories are compact curated pills; tags render #-prefixed in accent to
+   read as a different species. Same height family, reused on cards. ── */
+.cat-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 0.22em 0.75em;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--ink-2);
+  background: var(--bg-raised);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+a.cat-pill:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* The picker uses the SAME pill as the display (button-flavoured): clicking
+   toggles selection — no checkbox-and-text lists (2026-07-12). */
+button.cat-pill {
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+}
+
+button.cat-pill:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.cat-pill[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 0.22em 0.75em;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  color: var(--accent);
+  background: var(--accent-soft);
+  white-space: nowrap;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+
+.pill-status-endorsed { border-color: var(--endorsed); color: var(--endorsed); }
+.pill-status-deprecated, .pill-status-superseded { border-color: var(--del-strong); color: var(--del-strong); text-decoration: line-through; }
+.pill-status-draft { border-style: dashed; }
+
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Page header — THE page-title block (ui-guardrails §15). Every page
+   opens with $lib/components/PageHeader.svelte, which emits exactly this
+   markup: an h1 (+ optional action/cross-link row) and an optional lead
+   intro. Rhythm lives here so pages never re-declare it and never drift —
+   the same reason .container, .breadcrumb and .subview are global. New
+   pages get a consistent header for free; do not hand-roll .page-head or
+   local .intro/.head styles. ── */
+.page-head {
+  margin-bottom: var(--space-6);
+}
+
+.page-head-row {
+  display: flex;
+  justify-content: space-between;
+  /* center, INTE baseline (2026-07-14): med baseline sköt en actions-knapp
+     rad-boxen 5–6px nedåt och intro-avståndet varierade mellan sidor.
+     Rytmkontraktet i tests/design/rhythm.spec.ts vaktar invarianten. */
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* The heading keeps the global size; only its bottom margin is neutralised
+   so the intro/row spacing is owned by .page-head, not the h1. */
+.page-head-row h1 {
+  margin-bottom: 0;
+}
+
+.page-head-intro {
+  max-width: 68ch;
+  margin: var(--space-3) 0 0;
+  color: var(--ink-2);
+  /* --text-base, not sm: leads were too small next to the h1 (2026-07-12) */
+  font-size: var(--text-base);
+  /* Prose is serif — declared here so a stray .ui can never flip a lead to
+     sans again (the v1 rule, re-adopted 2026-07-13; guard: prose-role). */
+  font-family: var(--font-serif);
+  line-height: 1.6;
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* ── Access guard — THE "you can't see this" card (admin pages, the admin
+   hub). One .card with an --text-xl h1 (the sanctioned guard override) and
+   quiet body paragraphs. Centred, reading-width. ── */
+.guard {
+  max-width: 60ch;
+  margin: var(--space-8) auto 0;
+}
+
+.guard h1 {
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-2);
+}
+
+.guard p {
+  margin: 0 0 var(--space-2);
+}
+
+.guard p:last-child {
+  margin-bottom: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,19 @@
+# Optional add-on to docker-compose.deploy.yml: alias host names (www., a
+# retired address) answer with a 301 redirect to PUBLIC_HOST, path kept.
+# ALIAS_HOSTS_RULE in .env is a Traefik rule, e.g.
+#   ALIAS_HOSTS_RULE=Host(`www.example.se`) || Host(`old.example.org`)
+# The deploy workflows add this file automatically when the variable is set:
+#   docker compose -f docker-compose.deploy.yml -f docker-compose.alias.yml up -d --build
+# ($$ escapes the dollar for compose; Traefik sees ${1}.)
+
+services:
+  web:
+    labels:
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-alias.rule=${ALIAS_HOSTS_RULE:?set ALIAS_HOSTS_RULE in .env}"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-alias.entrypoints=websecure"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-alias.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-alias.middlewares=${APP_NAME:-kollepedia}-canonical"
+      - "traefik.http.routers.${APP_NAME:-kollepedia}-alias.service=${APP_NAME:-kollepedia}"
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-canonical.redirectregex.regex=^https?://[^/]+/(.*)"
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-canonical.redirectregex.replacement=https://${PUBLIC_HOST:?set PUBLIC_HOST in .env}/$${1}"
+      - "traefik.http.middlewares.${APP_NAME:-kollepedia}-canonical.redirectregex.permanent=true"

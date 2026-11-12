@@ -1,0 +1,45 @@
+# Python (server)
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Data & env
+server/data/*.db
+server/data/*.db-journal
+server/data/*.db-wal
+server/data/*.db-shm
+server/data/backups/
+.env
+.env.local
+
+# Node / SvelteKit (web)
+node_modules/
+.svelte-kit/
+web/build/
+web/dist/
+web/test-results/
+web/playwright-report/
+
+# Claude working material (the structure is tracked, scratch is not)
+.claude/artifacts/**/*.json
+.claude/artifacts/**/*.tmp
+.claude/artifacts/noptis/source/
+.claude/artifacts/netex_nordic/pages/
+.claude/screenshots/
+.claude/settings.json
+.claude/settings.local.json
+.remember/
+*.tmp
+
+# Editors / OS
+.obsidian/
+.vscode/
+.idea/
+.DS_Store
+*.log

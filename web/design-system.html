@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kollepedia NG — Visual Design Manual</title>
+<!-- The manual links the LIVE stylesheet. Tokens are never copied into this
+     file (v1's design-system.html diverged from app.css exactly that way).
+     Open directly in a browser from web/ — no build needed. The @fontsource
+     faces only load through Vite, so this page renders the fallback stack
+     (Georgia / system sans / ui-monospace); shapes differ slightly, tokens don't. -->
+<link rel="stylesheet" href="src/app.css" />
+<style>
+  /* Manual chrome only — everything under .ds-* so it can never fight app.css. */
+  .ds-shell { max-width: 1100px; margin: 0 auto; padding: 0 var(--space-6) var(--space-16); }
+  .ds-header { position: sticky; top: 0; z-index: 1050; display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between; padding: var(--space-3) 0; margin-bottom: var(--space-8); border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); }
+  .ds-header h1 { font-size: var(--text-lg); margin: 0; }
+  .ds-header h1 sup { font-family: var(--font-mono); font-size: 0.6em; color: var(--accent); }
+  .ds-nav { display: flex; flex-wrap: wrap; gap: var(--space-2); font-family: var(--font-sans); font-size: var(--text-xs); }
+  .ds-nav a { color: var(--ink-2); text-decoration: none; padding: 0.2em 0.55em; border-radius: 999px; border: 1px solid transparent; }
+  .ds-nav a:hover { border-color: var(--line); color: var(--ink); }
+  .ds-section { margin-bottom: var(--space-12); }
+  .ds-section > h2 { font-size: var(--text-xl); border-top: 1px solid var(--line); padding-top: var(--space-6); }
+  .ds-section > p { max-width: 68ch; color: var(--ink-2); }
+  .ds-spec { background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-6); margin: var(--space-4) 0; display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .ds-spec-block { display: block; }
+  .ds-caption { width: 100%; font-family: var(--font-sans); font-size: var(--text-xs); color: var(--ink-3); margin: var(--space-2) 0 0; }
+  .ds-caption code, .ds-section code { font-family: var(--font-mono); font-size: 0.9em; background: var(--bg-sunken); border-radius: 4px; padding: 0.05em 0.35em; }
+  .ds-swatches { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+  .ds-swatch { display: flex; flex-direction: column; gap: var(--space-1); align-items: flex-start; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--ink-3); }
+  .ds-swatch i { display: block; width: 7.5rem; height: 3rem; border-radius: var(--radius-md); border: 1px solid var(--line); }
+  .ds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-4); }
+  .ds-rule-list { max-width: 68ch; padding-left: 1.2rem; }
+  .ds-rule-list li { margin-bottom: var(--space-2); }
+  .ds-type-row { display: flex; align-items: baseline; gap: var(--space-4); border-bottom: 1px solid var(--line); padding: var(--space-2) 0; }
+  .ds-type-row .ds-tk { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--ink-3); min-width: 9rem; }
+  .ds-diff-del { background: var(--del-wash); color: var(--del-strong); text-decoration: line-through; }
+  .ds-diff-ins { background: var(--ins-wash); color: var(--ins-strong); }
+  .ds-dot { display: inline-block; width: 0.6em; height: 0.6em; border-radius: 50%; margin-right: 0.35em; }
+  .ds-halo { display: inline-block; width: 1rem; height: 1rem; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--bg-raised), 0 0 0 5px var(--endorsed); margin: 0 var(--space-2); }
+  .ds-undo-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-sunken); font-size: var(--text-sm); color: var(--ink-2); width: 100%; }
+  .ds-two { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr)); }
+  @media (max-width: 640px) { .ds-spec { padding: var(--space-4); } }
+</style>
+</head>
+<body>
+<div class="ds-shell">
+
+<header class="ds-header ui">
+  <h1>Kollepedia <sup>NG</sup> · Visual Design Manual</h1>
+  <nav class="ds-nav" aria-label="Sections">
+    <a href="#tokens">Tokens</a>
+    <a href="#type">Type</a>
+    <a href="#buttons">Buttons</a>
+    <a href="#pills">Pills</a>
+    <a href="#chips">Chips</a>
+    <a href="#cards">Cards</a>
+    <a href="#pagehead">Page&nbsp;head</a>
+    <a href="#subviews">Subviews</a>
+    <a href="#forms">Forms</a>
+    <a href="#feedback">Feedback</a>
+    <a href="#orgs">Orgs</a>
+    <a href="#timemachine">Time&nbsp;Machine</a>
+    <a href="#motion">Motion</a>
+    <a href="#guard">Guard</a>
+  </nav>
+  <button type="button" class="btn" id="ds-theme-btn" onclick="dsCycleTheme()">Theme: light</button>
+</header>
+
+<section class="ds-section" id="intro">
+  <h2>Introduction</h2>
+  <p>The NG identity is <strong>warm-paper editorial</strong>: paper surfaces, ink text, one
+  bläckblå interaction accent, a semantic diff palette for the Time Machine, and a pure-CSS
+  paper grain. Content is serif (Crimson&nbsp;Pro — kontraktet v1.1), UI chrome is sans (Familjen&nbsp;Grotesk),
+  metadata is mono (Fragment&nbsp;Mono). Three themes: light (paper), dark (night desk),
+  contrast (WCAG-AAA-leaning — no shadows, no grain, pure hues). Cycle the theme above:
+  every specimen on this page is drawn from the live <code>src/app.css</code>, so the manual
+  can never diverge from the app.</p>
+  <p>Rules and checklists live in <code>.claude/skills/ui-guardrails/</code>.</p>
+</section>
+
+<section class="ds-section" id="tokens">
+  <h2>Design Tokens</h2>
+  <p>The counting rule: <strong>3 surfaces / 3 inks / 2 lines</strong> — no fourth level, ever.
+  Every token is defined in all three themes. Swatches below are live <code>var()</code>
+  references; hex values live in app.css only.</p>
+
+  <div class="ds-spec ds-spec-block">
+    <div class="ds-swatches">
+      <span class="ds-swatch"><i style="background:var(--bg)"></i>--bg</span>
+      <span class="ds-swatch"><i style="background:var(--bg-raised)"></i>--bg-raised</span>
+      <span class="ds-swatch"><i style="background:var(--bg-sunken)"></i>--bg-sunken</span>
+      <span class="ds-swatch"><i style="background:var(--ink)"></i>--ink</span>
+      <span class="ds-swatch"><i style="background:var(--ink-2)"></i>--ink-2</span>
+      <span class="ds-swatch"><i style="background:var(--ink-3)"></i>--ink-3</span>
+      <span class="ds-swatch"><i style="background:var(--line)"></i>--line</span>
+      <span class="ds-swatch"><i style="background:var(--line-strong)"></i>--line-strong</span>
+    </div>
+    <p class="ds-caption">Surfaces: bg = page ground · raised = cards, popovers, inputs · sunken = recessed, quiet-hover. Ink: --ink-3 is the contrast floor.</p>
+  </div>
+
+  <div class="ds-spec ds-spec-block">
+    <div class="ds-swatches">
+      <span class="ds-swatch"><i style="background:var(--accent)"></i>--accent</span>
+      <span class="ds-swatch"><i style="background:var(--accent-soft)"></i>--accent-soft</span>
+      <span class="ds-swatch"><i style="background:var(--on-accent)"></i>--on-accent</span>
+      <span class="ds-swatch"><i style="background:var(--focus)"></i>--focus</span>
+    </div>
+    <p class="ds-caption">The accent is the <em>interaction</em> color — links, primary buttons, selection, active states. It is never decoration (that was v1's accent role; it is gone).</p>
+  </div>
+
+  <div class="ds-spec ds-spec-block">
+    <div class="ds-swatches">
+      <span class="ds-swatch"><i style="background:var(--del-wash)"></i>--del-wash</span>
+      <span class="ds-swatch"><i style="background:var(--del-strong)"></i>--del-strong</span>
+      <span class="ds-swatch"><i style="background:var(--ins-wash)"></i>--ins-wash</span>
+      <span class="ds-swatch"><i style="background:var(--ins-strong)"></i>--ins-strong</span>
+      <span class="ds-swatch"><i style="background:var(--blame-wash)"></i>--blame-wash</span>
+      <span class="ds-swatch"><i style="background:var(--endorsed)"></i>--endorsed</span>
+      <span class="ds-swatch"><i style="background:var(--sepia)"></i>--sepia</span>
+    </div>
+    <p class="ds-caption">The diff palette — the Time Machine's semantics. Only for version/diff/endorsement meaning, never decoration. <code>--endorsed</code> gold is reserved for endorsement; <code>--del-strong</code> also carries destructive UI (that IS its semantic).</p>
+  </div>
+
+  <ul class="ds-rule-list">
+    <li><strong>Radius — 5 tokens, zero literals:</strong> <code>--radius-sm</code> 4px (tags, diff highlights) · <code>--radius-md</code> 8px (buttons, inputs) · <code>--radius-lg</code> <strong>14px</strong> (cards, popovers) · <code>--radius-pill</code> 999px (pills, chips, count badges) · <code>--radius-round</code> 50% (icon buttons, avatars, dots). No <code>--radius-xl</code>, no modals, never v1's 12px — and never a raw <code>999px</code>/<code>50%</code> in a component (the guard fails it).</li>
+    <li><strong>Spacing:</strong> the v1 4px grid unchanged — <code>--space-1</code> … <code>--space-16</code>.</li>
+    <li><strong>Elevation:</strong> two shadows only (<code>--shadow-sm</code>, <code>--shadow-md</code>); contrast theme has none.</li>
+    <li><strong>Atmosphere:</strong> the paper grain (<code>body::before</code>, <code>--grain-opacity</code>) is visible on this page right now — pure CSS, pointer-transparent, off in contrast.</li>
+  </ul>
+</section>
+
+<section class="ds-section" id="type">
+  <h2>Typography</h2>
+  <div class="ds-spec ds-spec-block">
+    <div class="ds-type-row"><span class="ds-tk">--text-display</span><span style="font-size:var(--text-display); line-height:1.1;">Hållplats</span></div>
+    <div class="ds-type-row"><span class="ds-tk">--text-brand</span><span style="font-size:var(--text-brand); font-weight:640;">Kollepedia — wordmark only</span></div>
+    <div class="ds-type-row"><span class="ds-tk">--text-2xl</span><span style="font-size:var(--text-2xl);">Hållplats — page h1</span></div>
+    <div class="ds-type-row"><span class="ds-tk">--text-xl</span><span style="font-size:var(--text-xl);">Section title</span></div>
+    <div class="ds-type-row"><span class="ds-tk">--text-lg</span><span style="font-size:var(--text-lg);">Card title</span></div>
+    <div class="ds-type-row"><span class="ds-tk">--text-body-lg</span><span style="font-size:var(--text-body-lg);">Long-form definition prose sits at 1.15rem.</span></div>
+    <div class="ds-type-row"><span class="ds-tk">--text-base</span><span>Body text — serif, line-height 1.6.</span></div>
+    <div class="ds-type-row"><span class="ds-tk">--text-sm · .ui</span><span class="ui" style="font-size:var(--text-sm);">UI chrome — buttons, inputs, tables (Familjen Grotesk).</span></div>
+    <div class="ds-type-row"><span class="ds-tk">--text-xs · .mono</span><span class="mono">metadata · v0.2.0 · 2026-07-09 · fragment mono</span></div>
+    <div class="ds-type-row"><span class="ds-tk">--text-2xs</span><span class="ui" style="font-size:var(--text-2xs);">micro-labels — count badges, bell counts, dense tables</span></div>
+    <p class="ds-caption">Content serif · chrome sans · metadata mono. Never mix roles. Fonts are self-hosted via @fontsource — never a CDN link. Headings: weight 560, letter-spacing −0.01em. <strong>Heading sizes are GLOBAL</strong> (app.css): h1 = 2xl, h2 = xl, h3 = lg (≤640px: xl/lg) — pages declare none of their own. Sanctioned overrides: home hero (display), card-title h2 (lg), auth-card/guard h1 (xl), label-h2 (xs uppercase). <code>--text-brand</code> (2.5rem) belongs to the header wordmark alone — h1 sits below it (2.2rem) so page titles never compete with the logotype (2026-07-12).</p>
+  </div>
+</section>
+
+<section class="ds-section" id="buttons">
+  <h2>Buttons — 4 archetypes + icon</h2>
+  <p>Every button is one of these; no new button styles. Local needs compose a modifier on
+  top of <code>.btn</code>.</p>
+  <div class="ds-spec">
+    <button type="button" class="btn btn-primary">Spara ändring</button>
+    <button type="button" class="btn">Avbryt</button>
+    <button type="button" class="btn btn-quiet">Visa historik</button>
+    <button type="button" class="btn btn-danger">Ta bort</button>
+    <p class="ds-caption"><code>.btn-primary</code> accent fill · <code>.btn</code> outline, inverts on hover · <code>.btn-quiet</code> borderless, sunken hover · <code>.btn-danger</code> del-strong outline, fills on hover. Press = translateY(1px). Icon-only buttons: <code>.icon-btn</code> + <code>aria-label</code>, SVG <code>aria-hidden</code>.</p>
+  </div>
+</section>
+
+<section class="ds-section" id="pills">
+  <h2>Pills — the status language</h2>
+  <div class="ds-spec">
+    <span class="pill">Transmodel 2021</span>
+    <span class="pill pill-status-endorsed">Fastställd</span>
+    <span class="pill pill-status-deprecated">Föråldrad</span>
+    <span class="pill pill-status-superseded">Ersatt</span>
+    <span class="pill pill-status-draft">Utkast</span>
+    <span class="count-badge">12</span>
+    <span class="count-badge unread">3</span>
+    <span class="pill" style="border-style:dashed;"><span class="ds-dot" style="background:var(--ins-strong)"></span>anna-andersson</span>
+    <span class="pill"><span class="ds-dot" style="background:var(--ink-3)"></span>väntar på granskning</span>
+    <p class="ds-caption">Border color = status; deprecated/superseded strike through; draft is dashed. Status is always a pill — static rectangles are not in NG's vocabulary (a local <code>.badge</code> fails the guard). Counts always render as <code>.count-badge</code> — mono digits on a soft plate, <code>.unread</code> = green. UserChip: dashed border = anonymous; dot green = active, muted = pending review.</p>
+  </div>
+</section>
+
+<section class="ds-section" id="chips">
+  <h2>Chips — filtering &amp; classification</h2>
+  <div class="ds-spec">
+    <button type="button" class="filter-chip" aria-pressed="true">Alla</button>
+    <button type="button" class="filter-chip" aria-pressed="false">Fastställda</button>
+    <button type="button" class="filter-chip" aria-pressed="false">Utkast</button>
+    <p class="ds-caption"><code>.filter-chip</code> — THE toggleable filter (home search, tag rows, admin list filters). Active state keys off <code>aria-pressed</code>; never a local re-implementation.</p>
+  </div>
+  <div class="ds-spec">
+    <a href="#chips" class="cat-pill">Passenger Services</a>
+    <button type="button" class="cat-pill" aria-pressed="true">Network &amp; Routes</button>
+    <span class="tag-pill">#realtid</span>
+    <span class="tag-pill">#suti</span>
+    <p class="ds-caption"><code>.cat-pill</code> = curated categories (line-strong border; as a button it is the picker — clicking toggles, no checkbox lists). <code>.tag-pill</code> = free #-tags in accent — deliberately a different species.</p>
+  </div>
+</section>
+
+<section class="ds-section" id="cards">
+  <h2>Cards</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h3 style="font-size:var(--text-lg); margin-bottom:var(--space-2);">Hållplats</h3>
+      <p style="color:var(--ink-2); margin-bottom:var(--space-3);">Plats där resenärer kan stiga på eller av ett fordon i linjetrafik.</p>
+      <span class="pill">Kollektivtrafikordboken</span>
+    </div>
+    <div class="card">
+      <h3 style="font-size:var(--text-lg); margin-bottom:var(--space-2);">Stop point</h3>
+      <p style="color:var(--ink-2); margin-bottom:var(--space-3);">A point where passengers can board or alight from vehicles.</p>
+      <span class="pill pill-status-endorsed">Fastställd</span>
+    </div>
+  </div>
+  <p class="ds-caption">Global <code>.card</code>: bg-raised, --line border, radius-lg 14px, --shadow-sm, --space-6 padding. The grid above IS the global <code>.card-grid</code> (<code>repeat(auto-fill, minmax(300px, 1fr))</code>). Popovers (UserChip, AddToList) are .card-based — NG has no modals.</p>
+
+  <div class="ds-spec">
+    <span class="ui" style="display:inline-flex;align-items:center;gap:0.4em;background:var(--bg-sunken);border:1px solid var(--line);color:var(--ink-2);padding:0.22em 0.75em;border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:500;">🕮 Kollektivtrafikordboken · 2008</span>
+    <span class="ui" style="display:inline-flex;align-items:center;gap:0.4em;background:var(--scope-org-wash);border:1px solid color-mix(in srgb, var(--scope-org-ink) 45%, transparent);color:var(--scope-org-ink);padding:0.22em 0.75em;border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:500;">⚑ Nomenklatur (arbetsmaterial) · 2024</span>
+    <span class="ui" style="display:inline-flex;align-items:center;gap:0.4em;background:var(--bg-sunken);border:1px dashed var(--line);color:var(--ink-3);padding:0.22em 0.75em;border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:500;">◌ Min sandlåda · 2026</span>
+    <p class="ds-caption"><strong>Samlingsbadgen</strong> (<code>CollectionBadge.svelte</code>, v1-ärvd; typfärger per kontraktstillägg 2026-07-15): "Namn · år" på plate, scope-ikon ur biblioteket (book/group/person — glyferna här är bara illustrativa). <strong>Publik</strong> = neutral sunken plate · <strong>org-intern</strong> = <code>--scope-org-wash/-ink</code> (amber — skild från endorsement-guldet) · <strong>personlig</strong> = streckad kant + ink-3. Överallt där samling + årtal skrivs ut i innehållsflöde används badgen — aldrig lös mono-text. Undantag: listbox-options och native selects (nästlad interaktivitet) samt ytor där samlingen ÄR subjektet (samlingssidans kortrubriker).</p>
+  </div>
+</section>
+
+<section class="ds-section" id="pagehead">
+  <h2>Page header</h2>
+  <div class="ds-spec ds-spec-block">
+    <div class="page-head">
+      <div class="page-head-row">
+        <h1 style="font-size:var(--text-xl);">Samlingar</h1>
+        <div class="page-head-actions">
+          <a href="#pagehead" class="btn">Ny samling</a>
+        </div>
+      </div>
+      <p class="page-head-intro">Varje samling är en källa — en ordbok, en standard eller en organisations
+      egen begreppslista. Jämför definitioner mellan samlingar för att se hur branschen skiljer sig åt.</p>
+    </div>
+    <p class="ds-caption">Every page opens with <code>$lib/components/PageHeader.svelte</code>, which emits exactly this: <code>.page-head</code> &gt; <code>.page-head-row</code> (h1 + <code>.page-head-actions</code>) + <code>.page-head-intro</code> lead. The intro is <code>--text-base</code> (raised from sm 2026-07-12 — leads were too small next to the h1). Rhythm lives here — pages never re-declare it. (Specimen h1 shown one step down to avoid fighting the manual's own headings.)</p>
+  </div>
+</section>
+
+<section class="ds-section" id="subviews">
+  <h2>Tool subviews</h2>
+  <div class="ds-spec ds-spec-block">
+    <div class="subview" style="margin-bottom:0;">
+      <h3 class="subview-h" style="font-size:var(--text-xs);">Kategorisera</h3>
+      <p class="subview-hint">Kategorier gäller begreppet i alla versioner — inte bara den visade.</p>
+      <div class="subview-actions">
+        <button type="button" class="cat-pill" aria-pressed="true">Passenger Services</button>
+        <button type="button" class="cat-pill" aria-pressed="false">Operations</button>
+        <button type="button" class="btn btn-primary">Spara</button>
+        <button type="button" class="btn btn-quiet">Avbryt</button>
+      </div>
+    </div>
+    <p class="ds-caption">EVERY disclosure panel opened from a toolbar button is the global <code>.subview</code>: <code>.subview-h</code> uppercase heading, <code>.subview-hint</code> explanatory line, <code>.subview-actions</code> wrapping action row. One box — never a bespoke panel. Precedent: begreppssidans tool row (edit/categorize/relations/share/lists…). Sharing embeds <code>SharePanel.svelte</code>, never re-implements it.</p>
+  </div>
+</section>
+
+<section class="ds-section" id="forms">
+  <h2>Forms</h2>
+  <div class="ds-spec">
+    <div>
+      <label class="field-label" for="ds-input-demo">Lägg till medlem (användarnamn)</label>
+      <input class="input" id="ds-input-demo" type="text" placeholder="t.ex. anna-andersson" />
+    </div>
+    <div>
+      <label class="field-label" for="ds-textarea-demo">Motivering</label>
+      <textarea class="input" id="ds-textarea-demo" rows="2" placeholder="Valfri kommentar …" style="width:16rem;"></textarea>
+    </div>
+    <p class="ds-caption">The real primitives: <code>.field-label</code> (uppercase — --text-xs, 600, 0.04em tracking, --ink-3) and <code>.input</code> (--radius-md, --line border, --bg-raised, sans, focus = accent border). Before 2026-07-12 this recipe was copy-pasted 41 times; now the guard bans bare input/textarea/select styling. Layout (width, min-height) stays local. Search-and-pick = the ConceptCombobox ARIA pattern. Exception: the home hero search is serif + --radius-lg (it is content, not chrome).</p>
+  </div>
+</section>
+
+<section class="ds-section" id="feedback">
+  <h2>Feedback — the inline idiom</h2>
+  <p>NG deliberately has <strong>no toast system</strong>. Errors are persistent inline
+  <code>role="alert"</code>; transient status is <code>role="status"</code>. Destructive
+  flows never use <code>confirm()</code> — two sanctioned patterns:</p>
+  <div class="ds-two">
+    <div class="ds-spec">
+      <span class="ds-undo-row ui">
+        <span>Anna Andersson har tagits bort ur organisationen.</span>
+        <button type="button" class="btn btn-quiet">Ångra</button>
+      </span>
+      <p class="ds-caption"><strong>Inline undo</strong> (reversible actions): act immediately, offer Ångra for ~6s. Precedent: orgs member removal.</p>
+    </div>
+    <div class="ds-spec">
+      <span class="ui" style="display:inline-flex; align-items:center; gap:var(--space-2); font-size:var(--text-xs); color:var(--ink-2);">
+        Stänga av K2 Nationellt kunskapscentrum?
+        <button type="button" class="btn btn-quiet" style="color:var(--del-strong);">Ja</button>
+        <button type="button" class="btn btn-quiet">Avbryt</button>
+      </span>
+      <p class="ds-caption"><strong>Inline two-step confirm</strong> (hard-to-reverse): the trigger swaps in place for a role="alert" question. Precedent: org suspension.</p>
+    </div>
+  </div>
+  <div class="ds-spec">
+    <p class="ui" role="presentation" style="font-size:var(--text-sm); color:var(--del-strong); margin:0;">Kunde inte spara: definitionen är låst av en pågående ändringsförfrågan.</p>
+    <p class="ds-caption">Errors are persistent and specific — never auto-dismissed, never "Något gick fel".</p>
+  </div>
+</section>
+
+<section class="ds-section" id="orgs">
+  <h2>Organisations &amp; memberships (2026-07)</h2>
+  <div class="ds-spec">
+    <span class="pill">K2 · redaktör · gäst</span>
+    <span class="pill">SUTI · administratör</span>
+    <span class="pill" style="border-color:var(--accent); color:var(--accent);">ägare</span>
+    <span class="pill" style="text-decoration:line-through; opacity:.6;">Samtrafiken · redaktör · avslutat 2026-07-01</span>
+    <p class="ds-caption"><strong>Membership pills</strong> (author page, /orgs, profile): org · role, guest marking appended, owner in <code>--accent</code> (never <code>--endorsed</code> — gold is reserved for endorsement). Ended memberships strike through at 0.6 opacity and are visible to super admins only. Email is never rendered.</p>
+  </div>
+  <div class="ds-spec">
+    <span class="pill">Branschorganisation</span>
+    <span class="pill" style="border-color:var(--ins-strong); color:var(--ins-strong);">avgiftsbefriad</span>
+    <span class="pill" style="border-color:var(--del-strong); color:var(--del-strong);">betalkonto krävs</span>
+    <p class="ds-caption"><strong>Org-type badges</strong>: type as a plain pill; the billing consequence as a colored one — green = fee-exempt (academy/industry association), red = paid account required (commercial). Placeholder semantics until billing ships.</p>
+  </div>
+  <div class="ds-spec">
+    <span class="ui" style="display:inline-flex; align-items:center; gap:var(--space-2); font-size:var(--text-xs); color:var(--ink-2); flex-wrap:wrap;">
+      Skriv organisationens slug (k2) för att bekräfta avstängningen:
+      <input class="input mono" type="text" placeholder="k2" style="width:12ch; padding:var(--space-1) var(--space-2); font-size:var(--text-xs);" />
+      <button type="button" class="btn btn-quiet" style="color:var(--del-strong);" disabled>Ja</button>
+      <button type="button" class="btn btn-quiet">Avbryt</button>
+    </span>
+    <p class="ds-caption"><strong>Type-to-confirm</strong> (guardrail G4): suspensions of orgs and user accounts extend the inline two-step confirm with a typed slug/handle — the confirm button stays disabled until the input matches exactly. Restore actions keep the plain Ja/Avbryt. Precedents: /orgs suspension, author-page moderation.</p>
+  </div>
+  <div class="ds-spec">
+    <p class="ui" role="note" style="max-width:60ch; font-size:var(--text-sm); color:var(--ink-2); padding:var(--space-3) var(--space-4); border:1px dashed var(--line-strong); border-radius:var(--radius-md); background:var(--bg-raised); margin:0;">Utan organisation blir samlingen en privat sandlåda som bara du ser. Den dagen du vill publicera eller samarbeta behöver samlingen ägas av en organisation …</p>
+    <p class="ds-caption"><strong>Funnel note</strong> (dashed informative box, <code>role="note"</code>): transparent up-front copy about the sandbox → organisation path — informational, never warning-red, never a dark pattern. The same box carries the /categories change notice (semantic re-analysis on vocabulary changes).</p>
+  </div>
+  <p class="ds-caption">The audit log (/admin/events, guardrail G5) renders as the standard admin table — mono timestamps and actors, translated action labels, append-only (no row actions).</p>
+</section>
+
+<section class="ds-section" id="timemachine">
+  <h2>Time Machine</h2>
+  <p>The versions-DAG sets NG's bar for custom widgets: a hand-built git-graph SVG, a
+  playhead with a full keyboard model (<code>role="slider"</code>, ←/→ step, Home/End,
+  Space, ↑/↓ between lanes), and diff semantics always through the diff palette.</p>
+  <div class="ds-spec ds-spec-block">
+    <p style="font-size:var(--text-body-lg); max-width:60ch;">Plats där resenärer kan
+    <span class="ds-diff-del">stiga på bussen</span>
+    <span class="ds-diff-ins">stiga på eller av ett fordon i linjetrafik</span>,
+    markerad med <span style="color:color-mix(in oklab, currentColor 55%, var(--sepia)); font-weight:430;">äldre text som åldras mot sepia</span>.</p>
+    <p class="ds-caption">Word-diff: --del-wash/--del-strong strike-through vs --ins-wash/--ins-strong. Blame ink ages text via <code>color-mix(in oklab, currentColor …, var(--sepia))</code> + weight + opacity — three channels, so color alone never carries meaning. Endorsed versions get the gold halo: <span class="ds-halo" role="presentation"></span></p>
+    <p class="ds-caption"><strong>The rule:</strong> every animated view ships a static equivalent (AnimatedText → StaticDiff) in the same PR — reduced motion is a first-class variant, not a disabled one.</p>
+  </div>
+</section>
+
+<section class="ds-section" id="motion">
+  <h2>Motion & misc</h2>
+  <ul class="ds-rule-list">
+    <li>Never <code>transition: all</code>. Chrome 0.15s, content 0.2–0.25s, never &gt; 0.3s. Easing via <code>--ease-out</code> / <code>--ease-in-out</code>.</li>
+    <li>The slide-in menu: panel always in the DOM, <code>inert</code> when closed; Escape closes; focus goes to the first link on open and back to the hamburger on close.</li>
+    <li>Sticky header: <code>backdrop-filter: blur(10px)</code> + color-mix background (this page's header demonstrates it).</li>
+    <li>Infinite lists: InfiniteSentinel + scroll restore — not pagination.</li>
+    <li><strong>Icons (2026-07-10):</strong> every icon comes from <code>$lib/icons</code> (grid 20×20, stroke 1.5, round, currentColor — themes for free). Inactive = outline · active = <em>filled</em> + semantic color (watching green, endorsed gold, unread green). Flat, no gradients. ONE glyph per concept everywhere: rectangular speech bubble = discussion, dial clock = history, bell = watching/activity. Check the library BEFORE drawing a new icon; new icons go INTO the library. Counts always render as <code>.count-badge</code> (mono on soft plate; green <code>.unread</code> variant).</li>
+    <li>Global a11y utilities: <code>.sr-only</code> (never local copies), <code>.skip-link</code>, global <code>:focus-visible</code> = 2px <code>--focus</code>.</li>
+    <li>Page shell: root is <code>.container</code> (1100px) — only variant: <code>.container.narrow</code> 640px (konto/auth). <code>.container.wide</code> är avvecklad (kontraktets princip 8) — a component that needs the whole viewport uses <code>.full-bleed</code> (width 100vw, centered breakout; the inner element owns its horizontal scroll — precedent: jämförelsevyns kolumnrullare). Rhythm comes from the layout's <code>main</code> (space-8 top / space-16 bottom); pages add no own page-level padding. <code>.breadcrumb</code> is global.</li>
+    <li>Breakpoints: 900px collapse, 640px single column, 375px baseline.</li>
+  </ul>
+</section>
+
+<section class="ds-section" id="guard">
+  <h2>The mechanical guard</h2>
+  <p><strong>Nothing on this page is enforced by memory.</strong> <code>scripts/design-guard.mjs</code>
+  fails the build on: hardcoded colors/font-sizes/radii/spacing in components, undefined
+  <code>var(--…)</code> tokens, <code>transition: all</code>, local <code>.badge</code>/<code>.sr-only</code>/
+  <code>.filter-btn</code> definitions, local restyling of any global primitive, bare
+  <code>input/textarea/select</code> recipes, tokens missing a theme — and <em>this manual
+  drifting</em>: every class defined in app.css must appear on this page.</p>
+  <ul class="ds-rule-list">
+    <li><strong>Runs:</strong> every <code>npm test</code> (vitest: <code>design.guard.test.ts</code>) → CI, and the repo pre-commit hook (<code>.githooks/pre-commit</code>).</li>
+    <li><strong>Manually:</strong> <code>node scripts/design-guard.mjs</code> from <code>web/</code>.</li>
+    <li><strong>Escape hatch</strong> (rare, reviewed): append <code>/* design-guard-exempt: &lt;reason&gt; */</code> on the line. Precedents: mask alpha stops, viz micro-labels below the type scale.</li>
+    <li><strong>New primitive?</strong> Define it in app.css (all three themes), add its specimen here, then use it — the guard forces all three steps.</li>
+  </ul>
+</section>
+
+<footer style="border-top:1px solid var(--line); padding-top:var(--space-4);" class="ui">
+  <p style="font-size:var(--text-xs); color:var(--ink-3);">Kollepedia NG design manual ·
+  tokens live in <span class="mono">src/app.css</span> · rules in
+  <span class="mono">.claude/skills/ui-guardrails/</span> · v1 manual:
+  <span class="mono">web/design-system.html</span></p>
+</footer>
+
+</div>
+<script>
+  var dsThemes = ['light', 'dark', 'contrast'];
+  function dsCycleTheme() {
+    var root = document.documentElement;
+    var next = dsThemes[(dsThemes.indexOf(root.dataset.theme) + 1) % dsThemes.length];
+    root.dataset.theme = next;
+    document.getElementById('ds-theme-btn').textContent = 'Theme: ' + next;
+  }
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.dataset.theme = 'dark';
+    document.getElementById('ds-theme-btn').textContent = 'Theme: dark';
+  }
+</script>
+</body>
+</html>

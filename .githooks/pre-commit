@@ -1,0 +1,18 @@
+#!/bin/sh
+# Kollepedia pre-commit — mechanical quality gates (2026-07-12).
+# Versioned in .githooks/; activated per clone with:
+#   git config core.hooksPath .githooks
+# Bypassing with --no-verify only defers to CI: the same guards run in vitest.
+
+# ── NG design guard: no hardcoded CSS, primitives only, manual in sync ──
+if git diff --cached --name-only | grep -q '^web/'; then
+  echo "pre-commit: web changed — running design guard"
+  (cd "$(git rev-parse --show-toplevel)/web" && node scripts/design-guard.mjs) || {
+    echo ""
+    echo "pre-commit: design-guard FAILED — use the app.css primitives/tokens."
+    echo "Spec: web/design-system.html · rules: web/scripts/design-guard.mjs"
+    exit 1
+  }
+fi
+
+exit 0

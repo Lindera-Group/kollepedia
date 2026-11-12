@@ -1,0 +1,53 @@
+"""Migration 009 — header-bell read receipt (begreppssidans omgörning).
+
+Adds, if missing (idempotent, ALTER-based — never drops anything):
+
+1. users.activity_seen_at  DATETIME NULL  (NULL = never checked; counts every
+   event in the user's watched concepts as unseen. Set to now() by
+   POST /api/v1/activity/seen; read by GET /api/v1/activity/unseen-count.)
+
+Run:  uv run python scripts/migrate_009_activity_seen.py [path-to-db]
+"""
+
+import sqlite3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "kollepedia.db"
+
+COLUMNS: dict[str, list[tuple[str, str]]] = {
+    "users": [
+        ("activity_seen_at", "DATETIME"),
+    ],
+}
+
+
+def migrate(db_path: Path) -> dict[str, int]:
+    if not db_path.exists():
+        raise SystemExit(f"Database not found: {db_path}")
+    counts = {"columns_added": 0}
+
+    con = sqlite3.connect(db_path)
+    try:
+        for table, columns in COLUMNS.items():
+            existing = {row[1] for row in con.execute(f"PRAGMA table_info({table})")}
+            for name, ddl in columns:
+                if name in existing:
+                    print(f"  = {table}.{name} already present — skipped")
+                else:
+                    con.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+                    counts["columns_added"] += 1
+                    print(f"  + {table}.{name} added ({ddl})")
+        con.commit()
+    finally:
+        con.close()
+
+    print(f"\nMigration 009 done: {db_path}")
+    print(f"  {counts['columns_added']} columns added")
+    return counts
+
+
+if __name__ == "__main__":
+    migrate(Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_DB)
