@@ -5,6 +5,14 @@ den första releasen när betan är över. Noterna här speglar GitHub-releasern
 Prototypen v1 (0.5.0–0.10.0, 2024–2026) har sin egen logg i Linderå Groups
 arbetsrepo.
 
+## ng-v0.8.3 – 2026-11-17
+
+Driftsättningen kan sköta mejlinställningarna, så att ett byte av SMTP-relä är ett byte av hemlighet.
+
+- **Deploy to Staging** och **Deploy to Production** skriver `SMTP_URL`, `EMAIL_ALLOWLIST` och `EMAIL_FROM` i serverns `.env` när motsvarande hemlighet eller variabel finns i repot (`STAGING_…` / `PRODUCTION_…`). Det som inte är satt lämnas orört, så en installation som sköter `.env` för hand påverkas inte.
+- **docs/DRIFT.md** beskriver de nya inställningarna och rättar beskrivningen av `EMAIL_ALLOWLIST`: utan värde får ingen mottagare post.
+- **CLAUDE.md** beskriver uppdelningen mellan arbetsrepot och det publika repot: vad en release publicerar och vad som stannar.
+
 ## ng-v0.8.2 – 2026-11-13
 
 Kontaktvägar utan mejladress: ingen personlig adress i källkoden, dokumentationen eller på sajten.

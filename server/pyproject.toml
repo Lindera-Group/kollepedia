@@ -1,6 +1,6 @@
 [project]
 name = "kollepedia-server"
-version = "0.8.2"
+version = "0.8.3"
 description = "Kollepedia NG API — versioned, provenance-first terminology for public transport"
 readme = "../README.md"
 requires-python = ">=3.12"

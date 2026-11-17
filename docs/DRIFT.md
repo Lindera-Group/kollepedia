@@ -40,7 +40,7 @@ lika bra om etiketterna byts. Inga värdportar publiceras.
 | `PUBLIC_ORIGIN` | ja | `https://` + värdnamnet. Används för absoluta länkar i mejl, CORS och adapter-nodes origin-kontroll. |
 | `ALIAS_HOSTS_RULE` | nej | Traefik-regel för alias som ska omdirigeras, t.ex. ``Host(`www.kollepedia.se`)``. Aktiverar `docker-compose.alias.yml`. |
 | `JWT_SECRET` | ja | Signerar åtkomsttoken (HS256). `openssl rand -hex 32`. Olika per miljö; byte loggar ut alla. |
-| `EMAIL_ALLOWLIST` | nej | Tom eller saknad: bara den inbyggda standardadressen får post (testläge). Exakt `*`: alla mottagare (drift). Annars en kommaseparerad lista. |
+| `EMAIL_ALLOWLIST` | nej | Gäller när `SMTP_URL` är satt. Tom eller saknad: ingen mottagare får post (breven sparas som `blocked`). Exakt `*`: alla mottagare (drift). Annars en kommaseparerad lista med de adresser som får post, t.ex. i en testmiljö. |
 | `EMAIL_FROM` | nej | Avsändaradress, t.ex. `no-reply@kollepedia.se`. Domänen behöver SPF, DKIM och DMARC hos reläet. |
 | `SMTP_URL` | nej | `smtp://användare:lösenord@värd:587` (STARTTLS). Saknas den stannar breven i superadministratörens utkorg. |
 | `FEATURE_AI` | nej | `1` slår på AI-utkast, textextraktion och promptmallar i server och webb. Standard `0`. |
@@ -92,6 +92,15 @@ Inför varje deploy skriver workflown miljöns identitet (`APP_NAME`,
 variablerna och lämnar hemligheterna orörda; värdnamn och sökvägar står alltså
 varken i workflow-filerna eller i compose-filen. Rsyncen tar bara med det
 bygget behöver (inte `.git`, `.github` eller interna kataloger).
+
+Mejlinställningarna kan skötas på samma sätt. Finns hemligheten
+`STAGING_SMTP_URL` / `PRODUCTION_SMTP_URL`, hemligheten
+`STAGING_EMAIL_ALLOWLIST` / `PRODUCTION_EMAIL_ALLOWLIST` eller variabeln
+`STAGING_EMAIL_FROM` / `PRODUCTION_EMAIL_FROM` skriver workflown motsvarande
+rad (`SMTP_URL`, `EMAIL_ALLOWLIST`, `EMAIL_FROM`) i serverns `.env` vid varje
+deploy; det som inte är satt lämnas som det står. Byte av SMTP-relä blir då
+att byta hemligheten och driftsätta. Ge en testmiljö som delar användare med
+produktionen en tillåtelselista med enbart testarnas adresser, aldrig `*`.
 
 ## Backup och återställning
 

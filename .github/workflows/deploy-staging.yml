@@ -9,8 +9,10 @@
 # Repository secrets: VPS_HOST, VPS_SSH_KEY, VPS_KNOWN_HOSTS.
 # Repository variables: STAGING_URL (public origin, e.g. https://staging.example.se)
 # and optionally STAGING_ALIAS_RULE (Traefik rule for alias host names).
-# Secrets that belong to the environment (JWT_SECRET, mail) live only in the
-# server's .env, which this workflow never overwrites.
+# Optional mail settings, each written into the server's .env only when set:
+# secrets STAGING_SMTP_URL and STAGING_EMAIL_ALLOWLIST, variable
+# STAGING_EMAIL_FROM. Everything else in .env (JWT_SECRET, mail settings that
+# are not configured here) is left alone.
 
 name: Deploy to Staging
 
@@ -135,6 +137,30 @@ jobs:
           put PUBLIC_ORIGIN "$ORIGIN"
           if [ -n "$ALIAS" ]; then put ALIAS_HOSTS_RULE "$ALIAS"; else sed -i '/^ALIAS_HOSTS_RULE=/d' "$ENV"; fi
           echo "Environment identity written: APP_NAME=$APP PUBLIC_HOST=$HOST"
+          SCRIPT
+          } | ssh root@${{ secrets.VPS_HOST }} bash -s
+
+      - name: Write the mail settings into .env
+        env:
+          MAIL_SMTP_URL: ${{ secrets.STAGING_SMTP_URL }}
+          MAIL_ALLOWLIST: ${{ secrets.STAGING_EMAIL_ALLOWLIST }}
+          MAIL_FROM: ${{ vars.STAGING_EMAIL_FROM }}
+        run: |
+          # Optional. SMTP_URL, EMAIL_ALLOWLIST and EMAIL_FROM are each written
+          # only when the matching secret or variable is set; an unset one
+          # leaves that line of .env as it is. The values travel shell-quoted
+          # on stdin (never on a command line) and are not echoed.
+          {
+            printf 'APP=%q SMTP=%q ALLOW=%q FROM=%q\n' "$APP_NAME" "$MAIL_SMTP_URL" "$MAIL_ALLOWLIST" "$MAIL_FROM"
+            cat <<'SCRIPT'
+          set -e
+          ENV="/opt/$APP/.env"
+          put() { sed -i "/^$1=/d" "$ENV"; printf '%s=%s\n' "$1" "$2" >> "$ENV"; }
+          WROTE=""
+          if [ -n "$SMTP" ]; then put SMTP_URL "$SMTP"; WROTE="$WROTE SMTP_URL"; fi
+          if [ -n "$ALLOW" ]; then put EMAIL_ALLOWLIST "$ALLOW"; WROTE="$WROTE EMAIL_ALLOWLIST"; fi
+          if [ -n "$FROM" ]; then put EMAIL_FROM "$FROM"; WROTE="$WROTE EMAIL_FROM"; fi
+          echo "Mail settings written:${WROTE:- none}"
           SCRIPT
           } | ssh root@${{ secrets.VPS_HOST }} bash -s
 

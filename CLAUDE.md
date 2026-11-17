@@ -77,6 +77,19 @@ och databasläge; *Deploy to Production* kräver `staging_verified=true`. Allt
 miljöspecifikt (värdnamn, ursprung, mejl, flaggor) ligger i serverns `.env`
 och i repots Actions-variabler, inte i filerna. Se `docs/DRIFT.md`.
 
+## Två repon: verkstaden och det publika
+
+Det här är arbetsrepot `Lindera-Group/kollepedia-verkstad` (privat: full
+historik, interna anteckningar under `.claude/`). Den öppna källkoden bor i
+`Lindera-Group/kollepedia`, som är en tvättad kopia: workflown *Publish to
+public repo* (`.github/workflows/publish.yml`) lägger dit en commit per
+releasetagg, utan det som står i `.publishignore`, och stoppar ett träd som
+bär en hemlighet eller en mejladress utanför sin tillåtna lista. Arbete som
+inte är taggat som release finns alltså bara i verkstaden. Allt utanför
+`.publishignore` blir publikt vid nästa release, den här filen inräknad.
+Bidrag utifrån kommer som pull requests på det publika repot och förs över
+hit för hand.
+
 ## Versioner och releaser
 
 Taggarna heter `ng-vX.Y.Z` under betan på kollepedia.se; `v1.0.0` blir den
