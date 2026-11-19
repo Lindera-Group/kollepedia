@@ -19,6 +19,7 @@ from starlette.routing import Route
 from app import mcp_public
 from app.models import Collection
 from tests.test_api import _create_concept
+from tests.test_search import _age_main_branch
 
 MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
@@ -109,6 +110,59 @@ def test_search_and_read_see_only_public_collections(mcp_client, mcp_db, client,
     assert err is None
     slugs = {c["slug"] for c in listed}
     assert collection.slug in slugs and "intern-lista" not in slugs
+
+
+def test_search_returns_hits_in_the_same_order_as_the_site(
+    mcp_client, mcp_db, client, db, collection
+):
+    """search_concepts and GET /concepts (the site's search field) answer the
+    same question with the same concepts in the same order."""
+    other = Collection(slug="andra-samlingen", name="Andra samlingen")
+    db.add(other)
+    db.commit()
+    _create_concept(
+        client, collection.id, form="Analyszon", definition="Ett område nära en hållplats."
+    )
+    _create_concept(client, collection.id, form="Busshållplats")
+    _create_concept(client, other.id, form="Hållplatsläge")
+    newer = _create_concept(client, collection.id, form="Hållplats")
+    older = _create_concept(client, other.id, form="Hållplats")
+    _create_concept(client, collection.id, form="Zon", definition="Ett avgiftsområde.")
+    # Equal names: the one that entered the bank first comes first.
+    _age_main_branch(db, older["id"], days_ago=30)
+
+    def site(**params) -> list[str]:
+        resp = client.get("/api/v1/concepts", params=params, headers={"X-User": ""})
+        assert resp.status_code == 200, resp.text
+        return [item["id"] for item in resp.json()["items"]]
+
+    def over_mcp(**arguments) -> list[str]:
+        hits, err = _call(mcp_client, "search_concepts", arguments)
+        assert err is None, err
+        return [hit["id"] for hit in hits]
+
+    hits, err = _call(mcp_client, "search_concepts", {"q": "hållplats", "limit": 100})
+    assert err is None, err
+    # Exact name, name-prefix, name-contains, definition-only — not alphabetical.
+    assert [h["canonical_form"] for h in hits] == [
+        "Hållplats",
+        "Hållplats",
+        "Hållplatsläge",
+        "Busshållplats",
+        "Analyszon",
+    ]
+    assert [h["id"] for h in hits[:2]] == [older["id"], newer["id"]]
+
+    expected = site(q="hållplats", limit=100)
+    assert [h["id"] for h in hits] == expected
+    # A smaller limit is the head of the same list.
+    assert over_mcp(q="hållplats", limit=2) == expected[:2] == site(q="hållplats", limit=2)
+    # Surrounding whitespace means the same on both sides.
+    assert over_mcp(q="  hållplats ", limit=100) == site(q="  hållplats ", limit=100) == expected
+    # One collection.
+    narrowed = site(q="hållplats", collection=other.slug, limit=100)
+    assert len(narrowed) == 2
+    assert over_mcp(q="hållplats", collection=other.slug, limit=100) == narrowed
 
 
 def test_collection_detail_reports_export_rule(mcp_client, mcp_db, db):

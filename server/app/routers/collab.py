@@ -85,9 +85,7 @@ def _comment_out(comment: Comment, users: dict[str, User]) -> schemas.CommentOut
 def _comments_out(db: Session, comments: list[Comment]) -> list[schemas.CommentOut]:
     user_ids = {c.created_by for c in comments if c.created_by}
     users = (
-        {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()}
-        if user_ids
-        else {}
+        {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
     )
     return [_comment_out(c, users) for c in comments]
 
@@ -111,9 +109,7 @@ def list_concept_comments(
     return _comments_out(db, comments)
 
 
-@router.post(
-    "/concepts/{concept_id}/comments", response_model=schemas.CommentOut, status_code=201
-)
+@router.post("/concepts/{concept_id}/comments", response_model=schemas.CommentOut, status_code=201)
 def create_concept_comment(
     concept_id: str,
     payload: CommentIn,
@@ -179,9 +175,7 @@ def delete_comment(
     if concept is not None and not can_view_collection(user, concept.collection):
         raise api_error(404, "comment_not_found", "Comment not found")
     if not user.is_super_admin and comment.created_by != user.id:
-        raise api_error(
-            403, "comment_delete_forbidden", "Only the author can delete the comment."
-        )
+        raise api_error(403, "comment_delete_forbidden", "Only the author can delete the comment.")
     db.delete(comment)
     db.commit()
 
@@ -247,15 +241,9 @@ def _version_kinds(db: Session, version_ids: list[str]) -> dict[str, str]:
     if not version_ids:
         return {}
     edges_by_child: dict[str, list[VersionEdge]] = {}
-    for edge in (
-        db.query(VersionEdge).filter(VersionEdge.child_id.in_(version_ids)).all()
-    ):
+    for edge in db.query(VersionEdge).filter(VersionEdge.child_id.in_(version_ids)).all():
         edges_by_child.setdefault(edge.child_id, []).append(edge)
-    versions = (
-        db.query(Version.id, Version.provenance)
-        .filter(Version.id.in_(version_ids))
-        .all()
-    )
+    versions = db.query(Version.id, Version.provenance).filter(Version.id.in_(version_ids)).all()
     kinds: dict[str, str] = {}
     for version_id, provenance in versions:
         parents = edges_by_child.get(version_id, [])
@@ -390,9 +378,7 @@ def _proposal_branch_head_id(proposal: ChangeProposal) -> str | None:
 def _events_out(db: Session, events: list[_Event]) -> list[schemas.ActivityItemOut]:
     actor_ids = {e.actor_id for e in events if e.actor_id}
     actors = (
-        {u.id: u for u in db.query(User).filter(User.id.in_(actor_ids)).all()}
-        if actor_ids
-        else {}
+        {u.id: u for u in db.query(User).filter(User.id.in_(actor_ids)).all()} if actor_ids else {}
     )
     concept_ids = {e.concept_id for e in events}
     heads: dict[str, str] = {}

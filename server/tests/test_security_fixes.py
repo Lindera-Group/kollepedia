@@ -31,9 +31,7 @@ def _make_org_private(client, coll, anna):
 def test_lists_are_private_to_their_owner(client):
     anna = _register(client, "anna")
     bertil = _register(client, "bertil")
-    mine = client.post(
-        "/api/v1/lists", json={"name": "Min profil"}, headers=_bearer(anna)
-    ).json()
+    mine = client.post("/api/v1/lists", json={"name": "Min profil"}, headers=_bearer(anna)).json()
 
     # Ägaren ser och läser sin lista.
     assert [ll["id"] for ll in client.get("/api/v1/lists", headers=_bearer(anna)).json()] == [
@@ -53,9 +51,7 @@ def test_lists_are_private_to_their_owner(client):
 
 def test_list_mutations_require_ownership(client):
     root, anna, cesar, bertil, coll, concept = _org_setup(client)
-    mine = client.post(
-        "/api/v1/lists", json={"name": "Profil"}, headers=_bearer(anna)
-    ).json()
+    mine = client.post("/api/v1/lists", json={"name": "Profil"}, headers=_bearer(anna)).json()
 
     # Främling kan inte lägga till eller ta bort objekt (404 — inte röjt).
     add_as_bertil = client.post(
@@ -116,9 +112,7 @@ def test_cannot_pin_a_concept_you_cannot_see(client):
 def test_list_export_is_owner_only(client):
     anna = _register(client, "anna")
     bertil = _register(client, "bertil")
-    mine = client.post(
-        "/api/v1/lists", json={"name": "Profil"}, headers=_bearer(anna)
-    ).json()
+    mine = client.post("/api/v1/lists", json={"name": "Profil"}, headers=_bearer(anna)).json()
     url = f"/api/v1/lists/{mine['id']}/export"
     assert client.get(url, headers=_bearer(anna)).status_code == 200
     assert client.get(url, headers=_bearer(bertil)).status_code == 404

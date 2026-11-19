@@ -135,9 +135,7 @@ def add_version(
             )
     elif mode == "branch":
         if not branch_name:
-            raise api_error(
-                422, "branch_name_required", "branch_name is required for mode=branch"
-            )
+            raise api_error(422, "branch_name_required", "branch_name is required for mode=branch")
         exists = (
             db.query(Branch)
             .filter(Branch.concept_id == concept.id, Branch.name == branch_name)
@@ -188,9 +186,7 @@ def add_version(
         "translate": "revised_from",
     }[mode]
     db.add(
-        VersionEdge(
-            child_id=version.id, parent_id=base.id, edge_type=primary_edge_type, ordinal=0
-        )
+        VersionEdge(child_id=version.id, parent_id=base.id, edge_type=primary_edge_type, ordinal=0)
     )
 
     if mode == "synthesize":

@@ -1,13 +1,12 @@
 """Concept endpoints — including the Time Machine payload (/graph)."""
 
-
 import re
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import String, cast, func, or_
 from sqlalchemy.orm import Session, aliased, joinedload
 
-from .. import graph, schemas
+from .. import graph, schemas, search
 from ..db import get_db
 from ..deps import (
     can_view_collection,
@@ -173,18 +172,9 @@ def list_concepts(
     db: Session = Depends(get_db),
     user: User | None = Depends(current_user),
 ) -> schemas.ConceptListOut:
-    query = (
-        db.query(Concept, Version, Collection)
-        .join(Branch, (Branch.concept_id == Concept.id) & (Branch.name == "main"))
-        .join(Version, Version.id == Branch.head_version_id)
-        .join(Collection, Collection.id == Concept.collection_id)
-        .filter(visible_collection_criterion(user))
-    )
-    if collection:
-        # Comma-separated slugs — OR within the filter type (search filters).
-        slugs = [s.strip() for s in collection.split(",") if s.strip()]
-        if slugs:
-            query = query.filter(Collection.slug.in_(slugs))
+    # Which concepts match and in what order is defined in app/search.py,
+    # shared with the public MCP tool search_concepts.
+    query = search.in_collections(search.head_query(db, user), collection)
     if language:
         query = query.filter(Version.language == language)
     if status:
@@ -234,29 +224,8 @@ def list_concepts(
                 )
                 .exists()
             )
-    rank = None
-    if q:
-        like = f"%{q}%"
-        query = query.filter(
-            or_(Version.canonical_form.ilike(like), Version.definition_md.ilike(like))
-        )
-        # Relevance ranking (2026-07-11): exact name match first, then
-        # name-prefix, then name-contains, and definition-only matches last;
-        # alphabetical within each band.
-        from sqlalchemy import case, func
-
-        lowered = func.lower(Version.canonical_form)
-        needle = q.lower()
-        rank = case(
-            (lowered == needle, 0),
-            (lowered.like(f"{needle}%"), 1),
-            (lowered.like(f"%{needle}%"), 2),
-            else_=3,
-        )
+    query, order = search.text_search(query, q)
     total = query.count()
-    order = (rank, Version.canonical_form.asc()) if rank is not None else (
-        Version.canonical_form.asc(),
-    )
     rows = query.order_by(*order).offset(offset).limit(limit).all()
 
     version_counts: dict[str, int] = {}
@@ -508,9 +477,9 @@ def get_concept_graph(
         .all()
     )
     user_ids = {v.created_by for v in versions if v.created_by}
-    users = {
-        u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()
-    } if user_ids else {}
+    users = (
+        {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
+    )
     version_ids = [v.id for v in versions]
     edges = (
         db.query(VersionEdge).filter(VersionEdge.child_id.in_(version_ids)).all()
@@ -576,9 +545,7 @@ def create_version(
     concept = _get_concept(db, concept_id, user)
     # mode=branch is exempt from the collection lock for any authed identity —
     # branching is how locked content evolves (VISION §4.3, iteration 4).
-    ensure_write_allowed(
-        user, concept.collection, branch_exempt=payload.mode == "branch"
-    )
+    ensure_write_allowed(user, concept.collection, branch_exempt=payload.mode == "branch")
     version = graph.add_version(
         db,
         concept=concept,

@@ -161,9 +161,7 @@ def test_promote_via_api(client, collection):
         },
     ).json()
 
-    resp = client.post(
-        f"/api/v1/concepts/{concept['id']}/promote", json={"version_id": v1["id"]}
-    )
+    resp = client.post(f"/api/v1/concepts/{concept['id']}/promote", json={"version_id": v1["id"]})
     assert resp.status_code == 201
     promoted = resp.json()
     assert promoted["definition_md"] == "originaltext"
@@ -296,9 +294,7 @@ def test_legacy_prototype_id_resolves_to_concept(client, db):
             "definition_md": "En definition.",
         },
     ).json()
-    db.add(
-        LegacyId(legacy_id="00000000-dead-beef-0000-000000000001", concept_id=concept["id"])
-    )
+    db.add(LegacyId(legacy_id="00000000-dead-beef-0000-000000000001", concept_id=concept["id"]))
     db.commit()
 
     aliased = client.get("/api/v1/concepts/00000000-dead-beef-0000-000000000001")

@@ -144,9 +144,7 @@ def list_users(
             .filter(OrgMembership.role == "admin", OrgMembership.ended_at.is_(None))
             .scalar_subquery()
         )
-        query = query.filter(
-            or_(User.is_super_admin.is_(True), User.id.in_(admin_member_ids))
-        )
+        query = query.filter(or_(User.is_super_admin.is_(True), User.id.in_(admin_member_ids)))
     elif filter == "pending":
         query = query.filter(User.review_status == "pending")
     users = query.order_by(User.display_name.asc()).limit(limit).all()

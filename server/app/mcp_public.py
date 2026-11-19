@@ -26,10 +26,10 @@ from mcp.server.transport_security import TransportSecuritySettings
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from . import graph
+from . import graph, search
 from .db import SessionLocal
 from .deps import can_view_collection, export_allowed, visible_collection_criterion
-from .models import Branch, Collection, Concept, ConceptRelation, Version
+from .models import Collection, Concept, ConceptRelation, Version
 
 mcp = FastMCP(
     "kollepedia",
@@ -184,24 +184,17 @@ def search_concepts(
     q: str, collection: str | None = None, limit: int = 20
 ) -> list[dict[str, Any]]:
     """Search public concepts by term or definition text (current head
-    versions). `collection` narrows to one collection slug; `limit` ≤ 100."""
+    versions). Hits come in the same order as in the search field on the
+    site: the exact term first, then terms that start with the query, terms
+    that contain it, and last concepts where only the definition matches;
+    alphabetical within each group. `collection` narrows to one collection
+    slug (or several, comma-separated); `limit` ≤ 100."""
     limit = max(1, min(int(limit), 100))
     with SessionLocal() as db:
-        query = (
-            db.query(Concept, Version, Collection)
-            .join(Branch, (Branch.concept_id == Concept.id) & (Branch.name == "main"))
-            .join(Version, Version.id == Branch.head_version_id)
-            .join(Collection, Collection.id == Concept.collection_id)
-            .filter(visible_collection_criterion(None))
-        )
-        if collection:
-            query = query.filter(Collection.slug == collection)
-        if q and q.strip():
-            like = f"%{q.strip()}%"
-            query = query.filter(
-                or_(Version.canonical_form.ilike(like), Version.definition_md.ilike(like))
-            )
-        rows = query.order_by(Version.canonical_form.asc()).limit(limit).all()
+        # The matching and the order are the site's own (app/search.py).
+        query = search.in_collections(search.head_query(db, None), collection)
+        query, order = search.text_search(query, q)
+        rows = query.order_by(*order).limit(limit).all()
         return [
             {
                 "id": concept.id,

@@ -340,9 +340,7 @@ def test_random_operation_sequence_stays_acyclic(db, collection):
     all_versions = versions()
     assert len(all_versions) > 10
     edges = (
-        db.query(VersionEdge)
-        .filter(VersionEdge.child_id.in_([v.id for v in all_versions]))
-        .all()
+        db.query(VersionEdge).filter(VersionEdge.child_id.in_([v.id for v in all_versions])).all()
     )
     parents: dict[str, list[str]] = {}
     for e in edges:

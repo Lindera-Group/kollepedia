@@ -28,8 +28,7 @@ def _setup(client):
 def _global_taxonomy(client, root):
     resp = client.post(
         "/api/v1/taxonomies",
-        json={"slug": "kategorier", "name": "Kategorier", "scope": "global",
-              "min_per_concept": 1},
+        json={"slug": "kategorier", "name": "Kategorier", "scope": "global", "min_per_concept": 1},
         headers=_bearer(root),
     )
     assert resp.status_code == 201, resp.text
@@ -84,12 +83,15 @@ def test_collection_taxonomy_is_curated_by_collection_managers(client):
     root, anna, coll, _concept = _setup(client)
     bertil = _register(client, "bertil")
     payload = {
-        "slug": "parts", "name": "Delar", "scope": "collection",
-        "collection_id": coll["id"], "min_per_concept": 1, "max_per_concept": 1,
+        "slug": "parts",
+        "name": "Delar",
+        "scope": "collection",
+        "collection_id": coll["id"],
+        "min_per_concept": 1,
+        "max_per_concept": 1,
     }
     assert (
-        client.post("/api/v1/taxonomies", json=payload, headers=_bearer(bertil)).status_code
-        == 403
+        client.post("/api/v1/taxonomies", json=payload, headers=_bearer(bertil)).status_code == 403
     )
     created = client.post("/api/v1/taxonomies", json=payload, headers=_bearer(anna))
     assert created.status_code == 201, created.text
@@ -123,8 +125,14 @@ def test_assignment_lives_on_concept_and_respects_max(client):
     # Parts: max_per_concept=1 is HARD.
     parts = client.post(
         "/api/v1/taxonomies",
-        json={"slug": "parts", "name": "Delar", "scope": "collection",
-              "collection_id": coll["id"], "min_per_concept": 1, "max_per_concept": 1},
+        json={
+            "slug": "parts",
+            "name": "Delar",
+            "scope": "collection",
+            "collection_id": coll["id"],
+            "min_per_concept": 1,
+            "max_per_concept": 1,
+        },
         headers=_bearer(anna),
     ).json()
     p1 = _add_value(client, parts["id"], "Del 1 — Common Concepts", _bearer(anna))
@@ -190,9 +198,7 @@ def test_multi_collection_and_multi_tag_filters(client):
     _create_concept(
         client, coll2["id"], form="biljett", headers=_bearer(anna), tags=["taxa", "resa"]
     )
-    _create_concept(
-        client, coll2["id"], form="zon", headers=_bearer(anna), tags=["taxa"]
-    )
+    _create_concept(client, coll2["id"], form="zon", headers=_bearer(anna), tags=["taxa"])
 
     both = client.get(
         "/api/v1/concepts", params={"collection": f"{coll['slug']},{coll2['slug']}"}
@@ -207,9 +213,7 @@ def test_tags_endpoint_suggests_existing_tags(client):
     _create_concept(
         client, coll["id"], form="biljett", headers=_bearer(anna), tags=["taxa", "biljettsystem"]
     )
-    _create_concept(
-        client, coll["id"], form="zon", headers=_bearer(anna), tags=["taxa"]
-    )
+    _create_concept(client, coll["id"], form="zon", headers=_bearer(anna), tags=["taxa"])
     tags = client.get("/api/v1/tags").json()
     assert tags[0] == {"name": "taxa", "count": 2}
     filtered = client.get("/api/v1/tags", params={"q": "biljett"}).json()
@@ -221,7 +225,10 @@ def test_search_ranking_exact_name_first(client):
     _create_concept(client, coll["id"], form="biljettresa", headers=_bearer(anna))
     _create_concept(client, coll["id"], form="biljett", headers=_bearer(anna))
     _create_concept(
-        client, coll["id"], form="zon", headers=_bearer(anna),
+        client,
+        coll["id"],
+        form="zon",
+        headers=_bearer(anna),
         definition_md="Gäller som biljett i hela zonen.",
     )
     hits = client.get("/api/v1/concepts", params={"q": "biljett"}).json()

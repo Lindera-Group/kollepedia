@@ -122,6 +122,15 @@ samma process som API:et, med samma synlighetsregel som en anonym besökare:
 `get_concept_history`. `mcp_server.py` i serverroten är en stdio-variant för
 lokal utveckling.
 
+Vad som träffar en sökning och i vilken ordning står på ett ställe,
+`app/search.py`, som både `GET /concepts` (sajtens sökfält och bläddringslista)
+och MCP-verktyget `search_concepts` bygger sin fråga med. Ordningen är exakt
+benämning, benämning som börjar med sökordet, benämning som innehåller det och
+sist träff enbart i definitionen; bokstavsordning inom varje grupp, och lika
+benämningar i den ordning begreppen lades in (huvudgrenens skapelsetid, sist
+begreppets id). Ordningen är därmed total, så sidbläddring varken upprepar
+eller hoppar över poster och sajt och MCP ger samma svar.
+
 ## Webb (web/)
 
 SvelteKit 2 med Svelte 5-runor, serverrenderad via adapter-node. Den publika

@@ -5,6 +5,23 @@ den första releasen när betan är över. Noterna här speglar GitHub-releasern
 Prototypen v1 (0.5.0–0.10.0, 2024–2026) har sin egen logg i Linderå Groups
 arbetsrepo.
 
+## ng-v0.8.4 – 2026-11-19
+
+MCP-sökningen ger träffarna i samma ordning som sökfältet på sajten.
+
+### Rättat
+- **MCP-verktyget `search_concepts` följer sajtens träffordning.** Verktyget sorterade i bokstavsordning, så att en sökning på *hållplats* gav *Analyszon* överst och begreppet självt kunde hamna utanför svaret. Nu kommer exakt benämning först, sedan benämningar som börjar med sökordet, benämningar som innehåller det och sist träffar enbart i definitionen – i bokstavsordning inom varje grupp.
+- **Sökningen är definierad på ett ställe.** `server/app/search.py` avgör vad som träffar och i vilken ordning, för både `GET /api/v1/concepts` (sajtens sökfält och bläddringslista) och MCP-verktyget, så att de inte kan glida isär.
+- **Lika benämningar har en bestämd ordning:** det begrepp som lades in först kommer först. Det är den ordning sajten redan gav i praktiken; nu är den uttalad, så sidbläddring varken upprepar eller hoppar över poster.
+- **Blanktecken runt sökordet ignoreras** i API:et och i MCP-verktyget, som sökfältet redan gjorde.
+
+### Innehåll
+- **Manualen** beskriver träffordningen, på svenska och engelska, och att `search_concepts` ger samma ordning som sökfältet.
+
+### Drift
+- **`server/scripts/ops.py` har åtgärden `account`:** ett kontos flaggor, medlemskap, återställningslänkar (utfärdad, använd, ersatt, förfallen), sessioner och de systemmejl som gått till adressen. Adressen maskeras och inget tokenmaterial skrivs ut.
+- **Skriptet kan matas in i den körande containern** på standard in (`docker exec -i <container> python - <åtgärd>`), så en ny eller ändrad åtgärd fungerar utan driftsättning.
+
 ## ng-v0.8.3 – 2026-11-17
 
 Driftsättningen kan sköta mejlinställningarna, så att ett byte av SMTP-relä är ett byte av hemlighet.

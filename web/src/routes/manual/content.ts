@@ -142,6 +142,13 @@ export const manual: Record<Lang, ManualContent> = {
           <strong>Sök i samlingen …</strong>
         </p>
         <p>
+          Träffarna kommer i relevansordning: först begrepp vars benämning är exakt
+          sökordet, sedan benämningar som börjar med det, benämningar som innehåller det
+          och sist begrepp där bara definitionen träffar – i bokstavsordning inom varje
+          grupp. Finns samma benämning flera gånger kommer det begrepp som lades in först
+          överst.
+        </p>
+        <p>
           Under sökfältet finns filterpanelen: <strong>Fler filter</strong> fäller ut
           filter för språk, kategorier, taggar, samlingar och status – samma knapp heter
           <strong>Dölj filter</strong> när panelen är öppen, och räknebadgen intill visar
@@ -929,8 +936,10 @@ export const manual: Record<Lang, ManualContent> = {
           som en anonym besökare. Verktygen är <code>list_collections</code>,
           <code>get_collection</code>, <code>search_concepts</code>,
           <code>get_concept</code> och <code>get_concept_history</code>; samlingar utan
-          vidarespridningsrätt är sökbara men märks som icke exporterbara. Inloggad
-          åtkomst med skrivningar kommer i ett senare steg. Registrera servern:
+          vidarespridningsrätt är sökbara men märks som icke exporterbara.
+          <code>search_concepts</code> ger träffarna i samma ordning som sökfältet på
+          sajten. Inloggad åtkomst med skrivningar kommer i ett senare steg. Registrera
+          servern:
         </p>
         <pre class="ui" tabindex="0" role="region" aria-label="Kommandorad för MCP-registrering"><code>claude mcp add --transport http kollepedia https://kollepedia.se/mcp</code></pre>
         <p>
@@ -1089,6 +1098,12 @@ export const manual: Record<Lang, ManualContent> = {
           results show which collection each hit comes from and the status of the version.
           To search within a single collection: open the collection and use its own field
           <strong>Search the collection …</strong>
+        </p>
+        <p>
+          Hits are ordered by relevance: first concepts whose name is exactly the query,
+          then names that start with it, names that contain it and last concepts where
+          only the definition matches — alphabetically within each group. When the same
+          name occurs several times, the concept that was added first comes first.
         </p>
         <p>
           Below the search field sits the filter panel: <strong>More filters</strong>
@@ -1887,8 +1902,10 @@ export const manual: Record<Lang, ManualContent> = {
           as an anonymous visitor. The tools are <code>list_collections</code>,
           <code>get_collection</code>, <code>search_concepts</code>,
           <code>get_concept</code> and <code>get_concept_history</code>; collections without
-          redistribution rights are searchable but marked as not exportable. Signed-in
-          access with writes comes in a later step. Register the server:
+          redistribution rights are searchable but marked as not exportable.
+          <code>search_concepts</code> returns hits in the same order as the search field
+          on the site. Signed-in access with writes comes in a later step. Register the
+          server:
         </p>
         <pre class="ui" tabindex="0" role="region" aria-label="Command line for MCP registration"><code>claude mcp add --transport http kollepedia https://kollepedia.se/mcp</code></pre>
         <p>

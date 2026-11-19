@@ -29,17 +29,15 @@ def get_version(
     if version is None or not can_view_collection(user, version.concept.collection):
         raise api_error(404, "version_not_found", "Version not found")
     collection = version.concept.collection
-    is_head = (
-        db.query(Branch).filter(Branch.head_version_id == version.id).first() is not None
-    )
+    is_head = db.query(Branch).filter(Branch.head_version_id == version.id).first() is not None
     return schemas.VersionPermalinkOut(
         **version_out(version).model_dump(),
         collection=schemas.VersionCollectionRefOut(
-                slug=collection.slug,
-                name=collection.name,
-                year=collection.year,
-                visibility=collection.visibility,
-                has_org=collection.organisation_id is not None,
-            ),
+            slug=collection.slug,
+            name=collection.name,
+            year=collection.year,
+            visibility=collection.visibility,
+            has_org=collection.organisation_id is not None,
+        ),
         is_head=is_head,
     )

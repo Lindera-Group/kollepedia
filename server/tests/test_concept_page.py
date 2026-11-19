@@ -222,9 +222,7 @@ def test_most_watched_orders_by_watcher_count_then_alpha_and_respects_limit(clie
     }
     assert items[0]["language"] == "sv"
 
-    limited = client.get(
-        "/api/v1/concepts/most-watched", params={"limit": 1}, headers=ANON
-    ).json()
+    limited = client.get("/api/v1/concepts/most-watched", params={"limit": 1}, headers=ANON).json()
     assert len(limited) == 1
     assert limited[0]["canonical_form"] == "resa"
 
@@ -247,9 +245,7 @@ def test_most_watched_hides_org_private_collections_from_outsiders(client):
 
     stranger = _register(client, "cesar")
     assert client.get("/api/v1/concepts/most-watched", headers=ANON).json() == []
-    assert (
-        client.get("/api/v1/concepts/most-watched", headers=_bearer(stranger)).json() == []
-    )
+    assert client.get("/api/v1/concepts/most-watched", headers=_bearer(stranger)).json() == []
 
     member_view = client.get("/api/v1/concepts/most-watched", headers=_bearer(anna)).json()
     assert [i["canonical_form"] for i in member_view] == ["hemlig-term"]
@@ -258,9 +254,7 @@ def test_most_watched_hides_org_private_collections_from_outsiders(client):
 
 def test_most_watched_limit_bounds_are_enforced(client, collection):
     assert client.get("/api/v1/concepts/most-watched", params={"limit": 0}).status_code == 422
-    assert (
-        client.get("/api/v1/concepts/most-watched", params={"limit": 51}).status_code == 422
-    )
+    assert client.get("/api/v1/concepts/most-watched", params={"limit": 51}).status_code == 422
 
 
 # --------------------------------------------------------------------------
@@ -337,9 +331,7 @@ def test_unseen_count_ignores_concepts_the_caller_no_longer_watches(client, coll
 
 
 def _activity_for(client, concept_id):
-    return client.get(
-        f"/api/v1/concepts/{concept_id}/activity", params={"limit": 200}
-    ).json()
+    return client.get(f"/api/v1/concepts/{concept_id}/activity", params={"limit": 200}).json()
 
 
 def test_fast_forward_proposal_merge_is_a_merge_event(client, collection):

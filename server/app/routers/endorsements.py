@@ -74,9 +74,7 @@ def _require_endorsing_org(
         )
     candidates = [
         org
-        for org in (
-            db.query(Organisation).filter(Organisation.id.in_(candidate_ids)).all()
-        )
+        for org in (db.query(Organisation).filter(Organisation.id.in_(candidate_ids)).all())
         if org.is_approved and not org.is_suspended
     ]
     if organisation_id is not None:
@@ -96,14 +94,12 @@ def _require_endorsing_org(
         raise api_error(
             403,
             "org_not_approved",
-            "The organisation is not approved yet; endorsing requires an "
-            "approved organisation.",
+            "The organisation is not approved yet; endorsing requires an approved organisation.",
         )
     raise api_error(
         422,
         "endorsement_org_ambiguous",
-        "You administer several organisations; specify which organisation "
-        "you are endorsing for.",
+        "You administer several organisations; specify which organisation you are endorsing for.",
     )
 
 
@@ -207,8 +203,7 @@ def withdraw_endorsement(
     # Withdrawal: the endorsing org's admins, or super admins. Historical
     # stamps without an organisation: super admins only.
     if not user.is_super_admin and not (
-        endorsement.organisation_id is not None
-        and is_org_admin(user, endorsement.organisation_id)
+        endorsement.organisation_id is not None and is_org_admin(user, endorsement.organisation_id)
     ):
         raise api_error(
             403,

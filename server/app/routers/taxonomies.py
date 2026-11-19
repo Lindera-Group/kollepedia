@@ -78,9 +78,7 @@ def taxonomy_out(taxonomy: Taxonomy) -> schemas.TaxonomyOut:
         min_per_concept=taxonomy.min_per_concept,
         max_per_concept=taxonomy.max_per_concept,
         values=[
-            schemas.TaxonomyValueOut(
-                id=v.id, name=v.name, name_en=v.name_en, position=v.position
-            )
+            schemas.TaxonomyValueOut(id=v.id, name=v.name, name_en=v.name_en, position=v.position)
             for v in taxonomy.values
         ],
     )
@@ -120,12 +118,8 @@ def list_taxonomies(
     if collection:
         coll = db.query(Collection).filter(Collection.slug == collection).first()
         if coll is None or not can_view_collection(user, coll):
-            raise api_error(
-                404, "collection_not_found", "Collection not found", slug=collection
-            )
-        query = query.filter(
-            (Taxonomy.scope == "global") | (Taxonomy.collection_id == coll.id)
-        )
+            raise api_error(404, "collection_not_found", "Collection not found", slug=collection)
+        query = query.filter((Taxonomy.scope == "global") | (Taxonomy.collection_id == coll.id))
     else:
         query = query.filter(Taxonomy.scope == "global")
     return [taxonomy_out(t) for t in query.order_by(Taxonomy.created_at.asc()).all()]
@@ -183,9 +177,7 @@ def create_taxonomy(
 def _get_taxonomy(db: Session, taxonomy_id: str) -> Taxonomy:
     taxonomy = db.get(Taxonomy, taxonomy_id)
     if taxonomy is None:
-        raise api_error(
-            404, "taxonomy_not_found", "Taxonomy not found", taxonomy_id=taxonomy_id
-        )
+        raise api_error(404, "taxonomy_not_found", "Taxonomy not found", taxonomy_id=taxonomy_id)
     return taxonomy
 
 
@@ -262,9 +254,7 @@ def patch_value(
 ) -> schemas.TaxonomyValueOut:
     value = db.get(TaxonomyValue, value_id)
     if value is None:
-        raise api_error(
-            404, "taxonomy_value_not_found", "Value not found", value_id=value_id
-        )
+        raise api_error(404, "taxonomy_value_not_found", "Value not found", value_id=value_id)
     taxonomy = value.taxonomy
     _require_curator(db, user, taxonomy.scope, _taxonomy_collection(db, taxonomy))
     name = payload.name.strip()
@@ -294,9 +284,7 @@ def delete_value(
 ) -> None:
     value = db.get(TaxonomyValue, value_id)
     if value is None:
-        raise api_error(
-            404, "taxonomy_value_not_found", "Value not found", value_id=value_id
-        )
+        raise api_error(404, "taxonomy_value_not_found", "Value not found", value_id=value_id)
     taxonomy = value.taxonomy
     _require_curator(db, user, taxonomy.scope, _taxonomy_collection(db, taxonomy))
     db.query(ConceptTaxonomyValue).filter(ConceptTaxonomyValue.value_id == value.id).delete()
@@ -318,9 +306,7 @@ def assign_values(
     """Replace the concept's assignment set for ONE taxonomy."""
     concept = db.get(Concept, concept_id)
     if concept is None or not can_view_collection(user, concept.collection):
-        raise api_error(
-            404, "concept_not_found", "Concept not found", concept_id=concept_id
-        )
+        raise api_error(404, "concept_not_found", "Concept not found", concept_id=concept_id)
     if user is None:
         raise api_error(401, "login_required", "Login required.")
     ensure_actor_can_write(user)
@@ -333,9 +319,7 @@ def assign_values(
     if concept.collection.is_archived:
         raise api_error(423, "collection_archived", "The collection is archived.")
     # Locked collections: same exemption rule as content writes (Bengt #1).
-    if concept.collection.is_locked and not is_collection_lock_exempt(
-        user, concept.collection
-    ):
+    if concept.collection.is_locked and not is_collection_lock_exempt(user, concept.collection):
         raise api_error(423, "collection_locked", "The collection is locked.")
     taxonomy = _get_taxonomy(db, taxonomy_id)
     if taxonomy.scope == "collection" and taxonomy.collection_id != concept.collection_id:
@@ -381,11 +365,7 @@ def assign_values(
         ConceptTaxonomyValue.value_id.in_(list(valid_ids.keys())),
     ).delete(synchronize_session=False)
     for value_id in unique_ids:
-        db.add(
-            ConceptTaxonomyValue(
-                concept_id=concept.id, value_id=value_id, added_by=user.id
-            )
-        )
+        db.add(ConceptTaxonomyValue(concept_id=concept.id, value_id=value_id, added_by=user.id))
     db.commit()
     return [
         schemas.TaxonomyValueOut(

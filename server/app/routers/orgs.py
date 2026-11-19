@@ -261,9 +261,7 @@ def create_org(
 
 
 @router.get("", response_model=list[OrgOut])
-def list_orgs(
-    db: Session = Depends(get_db), user: User = Depends(require_user)
-) -> list[OrgOut]:
+def list_orgs(db: Session = Depends(get_db), user: User = Depends(require_user)) -> list[OrgOut]:
     if user.is_super_admin:
         orgs = db.query(Organisation).order_by(Organisation.name.asc()).all()
     else:
@@ -395,9 +393,7 @@ def transfer_owner(
         membership.role = "admin"
         membership.kind = "member"
     org.owner_user_id = target.id
-    log_admin_event(
-        db, user, "org_owner_transferred", "organisation", org.id, note=target.handle
-    )
+    log_admin_event(db, user, "org_owner_transferred", "organisation", org.id, note=target.handle)
     db.commit()
     return _org_out(db, org)
 

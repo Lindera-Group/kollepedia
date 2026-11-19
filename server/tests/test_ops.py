@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 import importlib.util
+from datetime import timedelta
 from pathlib import Path
 
 from sqlalchemy import select
 
-from app.models import Organisation, OrgMembership, ResetToken, User
+from app.models import (
+    EmailMessage,
+    Organisation,
+    OrgMembership,
+    RefreshToken,
+    ResetToken,
+    User,
+    utcnow,
+)
 from app.routers.auth import hash_token
 
 SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
@@ -124,3 +133,58 @@ def test_reset_link_invalidates_earlier_tokens_and_refuses_super_admins(db) -> N
         assert "superadmin" in str(exc)
     else:
         raise AssertionError("expected SystemExit for a super-admin target")
+
+
+def test_account_shows_links_sessions_and_mail_without_secrets(db) -> None:
+    ops = _ops()
+    org = _org(db)
+    first = ops.provision_user(
+        db,
+        display_name="Jonas Johansson",
+        email="jonas@example.org",
+        org_slug=org.slug,
+        role="admin",
+    )
+    user = db.scalar(select(User).where(User.email == "jonas@example.org"))
+    assert user is not None
+    # A second link supersedes the first; the person then uses the second one,
+    # logs in, and the system has mailed the address once.
+    second = ops.reset_link(db, user.handle, "https://x")
+    raw_second = second.split("token=", 1)[1]
+    used = db.scalar(select(ResetToken).where(ResetToken.token_hash == hash_token(raw_second)))
+    assert used is not None
+    used.consumed_at = utcnow() + timedelta(minutes=5)
+    db.add(
+        RefreshToken(
+            user_id=user.id, token_hash="a" * 64, expires_at=utcnow() + timedelta(days=30)
+        )
+    )
+    db.add(
+        EmailMessage(
+            to_addr="Jonas@Example.org",
+            subject="s",
+            body_text="b",
+            template="reset_password",
+            status="sent",
+            sent_at=utcnow(),
+        )
+    )
+    db.commit()
+
+    text = ops.account(db, "jonas-johansson")
+    assert "jonas-johansson" in text and "j***@example.org" in text
+    assert "jonas@example.org" not in text
+    assert "svensk-kollektivtrafik (admin/member)" in text
+    assert "ersatt av ny länk" in text and "använd 20" in text
+    assert "Inloggningar: 1 sessioner, 1 aktiva" in text
+    assert "reset_password | sent" in text
+    raw_first = first["reset_link"].split("token=", 1)[1]
+    for secret in (raw_first, raw_second, used.token_hash, "a" * 64):
+        assert secret not in text
+
+    try:
+        ops.account(db, "finns-inte")
+    except SystemExit as exc:
+        assert "finns inte" in str(exc)
+    else:
+        raise AssertionError("expected SystemExit for an unknown handle")

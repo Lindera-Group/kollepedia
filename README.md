@@ -82,6 +82,7 @@ claude mcp add --transport http kollepedia https://kollepedia.se/mcp
 Verktygen är `list_collections`, `get_collection`, `search_concepts`,
 `get_concept` och `get_concept_history`. Samlingar vars licens inte tillåter
 vidarespridning är sökbara men inte exporterbara, och verktygen säger det.
+`search_concepts` ger träffarna i samma ordning som sökfältet på sajten.
 Inloggad åtkomst (skrivningar, privata samlingar) med personliga API-nycklar
 är nästa steg. Implementationen är `server/app/mcp_public.py`;
 `server/mcp_server.py` är en stdio-variant för lokal utveckling.

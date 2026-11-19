@@ -18,9 +18,17 @@ Actions:
                   e-mail only gets the membership/role it lacks, and a NULL
                   hash is replaced.
   reset-link      A fresh reset link for an existing account.
+  account         One account in depth: flags, memberships, every reset link
+                  (issued / used / superseded / expired), sessions and the
+                  mail the system produced for the address. Masked address,
+                  no token material — the way to see whether a person has
+                  actually got going.
 
 Arguments come from the CLI or from OPS_* environment variables (the
 workflow passes them as `docker exec -e`), environment taking precedence.
+The workflow pipes the repository's copy of this file into the container
+(`docker exec -i … python - <action>`), so a new or changed action runs
+against a live stack without a deploy.
 
 The reset link is printed to the workflow log, which only repository
 collaborators can read. Treat it as the secret it is: hand it to the person,
@@ -35,20 +43,28 @@ import argparse
 import os
 import secrets
 import sys
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from argon2 import PasswordHasher
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-ROOT = Path(__file__).resolve().parent.parent
+try:
+    _source = Path(__file__)
+except NameError:  # `python -c`
+    _source = Path("<stdin>")
+# Run as a file: the repository's server/ directory. Piped in on stdin by the
+# Ops workflow (__file__ is "<stdin>"): the container's working directory, /app.
+ROOT = Path.cwd() if _source.name.startswith("<") else _source.resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from app.models import (  # noqa: E402
     ORG_ROLES,
+    EmailMessage,
     Organisation,
     OrgMembership,
+    RefreshToken,
     ResetToken,
     User,
     utcnow,
@@ -118,6 +134,100 @@ def report(db: Session) -> str:
                 f" | {mask_email(user.email)} | lösenord: {'ja' if user.password_hash else 'nej'}"
                 f" | verifierad: {'ja' if user.email_verified else 'nej'}"
             )
+    return "\n".join(lines)
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """SQLite hands naive timestamps back; everything here is UTC."""
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+
+
+def _stamp(dt: datetime | None) -> str:
+    return _as_utc(dt).strftime("%Y-%m-%d %H:%M UTC") if dt else "–"
+
+
+def _yes(flag: bool) -> str:
+    return "ja" if flag else "nej"
+
+
+def account(db: Session, handle: str) -> str:
+    """One account in depth, for the question "has this person got going?":
+    flags, memberships, every reset link (issued, used, superseded or
+    expired), sessions (refresh tokens: logins and renewals) and the mail
+    the system produced for the address. The address is masked and no
+    token material is printed."""
+    user = db.scalar(select(User).where(User.handle == normalise_handle(handle)))
+    if user is None:
+        raise SystemExit(f"Kontot {handle!r} finns inte.")
+    now = utcnow()
+    lines = [
+        f"Konto {user.handle} | {user.display_name} | {mask_email(user.email)} | "
+        f"verifierad: {_yes(user.email_verified)} | aktiv: {_yes(user.is_active)} | "
+        f"granskning: {user.review_status} | superadmin: {_yes(user.is_super_admin)} | "
+        f"lösenord: {_yes(bool(user.password_hash))} | skapat: {_stamp(user.created_at)}"
+    ]
+    memberships = db.execute(
+        select(OrgMembership, Organisation)
+        .join(Organisation, Organisation.id == OrgMembership.organisation_id)
+        .where(OrgMembership.user_id == user.id)
+        .order_by(Organisation.slug)
+    ).all()
+    lines.append(
+        "Medlemskap: "
+        + (", ".join(f"{org.slug} ({m.role}/{m.kind})" for m, org in memberships) or "–")
+    )
+
+    tokens = db.scalars(
+        select(ResetToken)
+        .where(ResetToken.user_id == user.id)
+        .order_by(ResetToken.created_at.desc())
+        .limit(10)
+    ).all()
+    lines.append(f"Återställningslänkar: {len(tokens)} (senaste tio)")
+    for token in tokens:
+        if token.consumed_at is None:
+            state = "oanvänd, gäller" if _as_utc(token.expires_at) > now else "förfallen, oanvänd"
+        else:
+            consumed = _as_utc(token.consumed_at)
+            # reset_link() stamps earlier unused links consumed at the very
+            # moment it issues the new one — that is a replacement, not a use.
+            superseded = any(
+                _as_utc(other.created_at) > _as_utc(token.created_at)
+                and abs((_as_utc(other.created_at) - consumed).total_seconds()) < 2
+                for other in tokens
+            )
+            state = f"använd {_stamp(consumed)}"
+            if superseded:
+                state = f"ersatt av ny länk {_stamp(consumed)}"
+        lines.append(
+            f"  utfärdad {_stamp(token.created_at)} | går ut {_stamp(token.expires_at)} | {state}"
+        )
+
+    sessions = db.scalars(
+        select(RefreshToken)
+        .where(RefreshToken.user_id == user.id)
+        .order_by(RefreshToken.created_at.desc())
+    ).all()
+    live = [s for s in sessions if not s.revoked and _as_utc(s.expires_at) > now]
+    latest = _stamp(sessions[0].created_at) if sessions else "–"
+    lines.append(f"Inloggningar: {len(sessions)} sessioner, {len(live)} aktiva, senaste {latest}")
+
+    mails: list[EmailMessage] = []
+    if user.email:
+        mails = list(
+            db.scalars(
+                select(EmailMessage)
+                .where(func.lower(EmailMessage.to_addr) == user.email.lower())
+                .order_by(EmailMessage.created_at.desc())
+                .limit(10)
+            ).all()
+        )
+    lines.append(f"Mejl till adressen: {len(mails)} (senaste tio)")
+    for mail in mails:
+        lines.append(
+            f"  {_stamp(mail.created_at)} | {mail.template} | {mail.status} | "
+            f"skickat: {_stamp(mail.sent_at)}"
+        )
     return "\n".join(lines)
 
 
@@ -261,6 +371,8 @@ def main(argv: list[str] | None = None) -> None:
     r = sub.add_parser("reset-link")
     r.add_argument("--handle", default="")
     r.add_argument("--origin", default="")
+    a = sub.add_parser("account")
+    a.add_argument("--handle", default="")
     args = ap.parse_args(argv)
 
     from app.db import SessionLocal
@@ -290,6 +402,8 @@ def main(argv: list[str] | None = None) -> None:
         elif args.action == "reset-link":
             link = reset_link(db, _arg(args, "handle"), _arg(args, "origin"))
             print(f"Återställningslänk (7 dagar): {link}")
+        elif args.action == "account":
+            print(account(db, _arg(args, "handle")))
 
 
 if __name__ == "__main__":
