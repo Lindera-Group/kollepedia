@@ -146,7 +146,7 @@ export const manual: Record<Lang, ManualContent> = {
           sökordet, sedan benämningar som börjar med det, benämningar som innehåller det
           och sist begrepp där bara definitionen träffar – i bokstavsordning inom varje
           grupp. Finns samma benämning flera gånger kommer det begrepp som lades in först
-          överst.
+          överst. Stora och små bokstäver spelar ingen roll, inte heller för å, ä och ö.
         </p>
         <p>
           Under sökfältet finns filterpanelen: <strong>Fler filter</strong> fäller ut
@@ -1103,7 +1103,8 @@ export const manual: Record<Lang, ManualContent> = {
           Hits are ordered by relevance: first concepts whose name is exactly the query,
           then names that start with it, names that contain it and last concepts where
           only the definition matches — alphabetically within each group. When the same
-          name occurs several times, the concept that was added first comes first.
+          name occurs several times, the concept that was added first comes first. Upper
+          and lower case make no difference, for å, ä and ö too.
         </p>
         <p>
           Below the search field sits the filter panel: <strong>More filters</strong>

@@ -24,7 +24,6 @@ from ..models import (
     ConceptRelation,
     ConceptTaxonomyValue,
     Endorsement,
-    LegacyId,
     ListItem,
     PinList,
     Taxonomy,
@@ -80,14 +79,9 @@ def _snippet_md(text: str, max_words: int = 32) -> str:
 
 def _get_concept(db: Session, concept_id: str, user: User | None = None) -> Concept:
     """Fetch a concept; org_private collections 404 for outsiders (not 403 —
-    their existence is not disclosed). Prototype term_ids resolve through the
-    legacy_ids alias table — imported definitions link with the old ids and
-    versions are immutable, so the lookup translates instead (migrate_006)."""
-    concept = db.get(Concept, concept_id)
-    if concept is None:
-        legacy = db.get(LegacyId, concept_id)
-        if legacy is not None:
-            concept = db.get(Concept, legacy.concept_id)
+    their existence is not disclosed). Prototype term ids resolve to the
+    concept they alias (graph.find_concept)."""
+    concept = graph.find_concept(db, concept_id)
     if concept is None or not can_view_collection(user, concept.collection):
         raise api_error(404, "concept_not_found", "Concept not found")
     return concept

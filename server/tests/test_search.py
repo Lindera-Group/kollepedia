@@ -50,3 +50,19 @@ def test_query_whitespace_is_ignored(client, collection):
     assert _ids(client, q="  biljett ") == plain
     # Only whitespace is no query at all: the whole browse list.
     assert _ids(client, q="   ") == _ids(client)
+
+
+def test_case_is_ignored_for_swedish_letters_too(client, collection):
+    # One concept per band of the order, each spelling Å Ä Ö in another case
+    # than the query: SQLite's own lower() and LIKE only fold A–Z.
+    exact = _create_concept(client, collection.id, form="Ändhållplats", definition="Sist.")
+    starts = _create_concept(client, collection.id, form="ÄNDHÅLLPLATSLÄGE", definition="Läge.")
+    contains = _create_concept(client, collection.id, form="Linjens ändhållplats")
+    in_definition = _create_concept(
+        client, collection.id, form="Vändslinga", definition="Finns vid en ÄNDHÅLLPLATS."
+    )
+    _create_concept(client, collection.id, form="Övergång", definition="Byte.")
+
+    expected = [exact["id"], starts["id"], contains["id"], in_definition["id"]]
+    for q in ("ändhållplats", "ÄNDHÅLLPLATS", "Ändhållplats", "äNDHåLLPLATS"):
+        assert _ids(client, q=q) == expected, q

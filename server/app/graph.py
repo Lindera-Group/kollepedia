@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from .annotations import remap_annotations
 from .errors import api_error
-from .models import Branch, Concept, Version, VersionEdge
+from .models import Branch, Concept, LegacyId, Version, VersionEdge
 
 
 def coerce_status(status: str) -> str:
@@ -303,3 +303,18 @@ def head_of(db: Session, concept: Concept, branch_name: str = "main") -> Version
     if branch is None or branch.head_version_id is None:
         return None
     return db.get(Version, branch.head_version_id)
+
+
+def find_concept(db: Session, concept_id: str) -> Concept | None:
+    """A concept by its id, or by a prototype term id that aliases it.
+
+    Imported definitions link with the prototype's ids and versions are
+    immutable, so every reader that follows a `[Label](#id)` link resolves
+    it here (legacy_ids, built by migrate_006). Visibility is the caller's
+    to check."""
+    concept = db.get(Concept, concept_id)
+    if concept is None:
+        legacy = db.get(LegacyId, concept_id)
+        if legacy is not None:
+            concept = db.get(Concept, legacy.concept_id)
+    return concept

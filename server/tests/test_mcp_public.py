@@ -16,8 +16,8 @@ from sqlalchemy.orm import sessionmaker
 from starlette.applications import Starlette
 from starlette.routing import Route
 
-from app import mcp_public
-from app.models import Collection
+from app import graph, mcp_public
+from app.models import Collection, LegacyId
 from tests.test_api import _create_concept
 from tests.test_search import _age_main_branch
 
@@ -165,6 +165,13 @@ def test_search_returns_hits_in_the_same_order_as_the_site(
     assert over_mcp(q="hållplats", collection=other.slug, limit=100) == narrowed
 
 
+def test_search_ignores_case_for_swedish_letters(mcp_client, mcp_db, client, collection):
+    concept = _create_concept(client, collection.id, form="Övergångsbiljett", definition="x")
+    for q in ("övergångsbiljett", "ÖVERGÅNGSBILJETT"):
+        hits, err = _call(mcp_client, "search_concepts", {"q": q})
+        assert err is None and [h["id"] for h in hits] == [concept["id"]], q
+
+
 def test_collection_detail_reports_export_rule(mcp_client, mcp_db, db):
     blocked = Collection(
         slug="tillstand",
@@ -177,3 +184,39 @@ def test_collection_detail_reports_export_rule(mcp_client, mcp_db, db):
     assert err is None
     assert detail["export_allowed"] is False and "export_url" not in detail
     assert detail["licence"] == "© X – no redistribution"
+
+
+def test_prototype_ids_in_definition_links_resolve_like_on_the_site(
+    mcp_client, mcp_db, client, db, collection
+):
+    """Imported definitions link with the prototype's term ids. The site
+    resolves them through legacy_ids; a client that follows such a link over
+    MCP must land on the same concept, under its real id."""
+    target = _create_concept(client, collection.id, form="hållplatsområde", definition="mål")
+    old_id = "00000000-dead-beef-0000-000000000001"
+    private = Collection(slug="intern-lista", name="Intern lista", visibility="org_private")
+    db.add(private)
+    db.flush()
+    hidden = graph.create_concept(
+        db, collection_id=private.id, canonical_form="hemligt", language="sv", definition_md="x"
+    )[0]
+    hidden_old_id = "00000000-dead-beef-0000-000000000002"
+    db.add_all(
+        [
+            LegacyId(legacy_id=old_id, concept_id=target["id"]),
+            LegacyId(legacy_id=hidden_old_id, concept_id=hidden.id),
+        ]
+    )
+    db.commit()
+
+    detail, err = _call(mcp_client, "get_concept", {"concept_id": old_id})
+    assert err is None
+    assert detail["id"] == target["id"] and detail["canonical_form"] == "hållplatsområde"
+    assert detail["url"].endswith(f"/concepts/{target['id']}")
+
+    history, err = _call(mcp_client, "get_concept_history", {"concept_id": old_id})
+    assert err is None and history["concept_id"] == target["id"]
+
+    # An alias never opens a collection the anonymous reader cannot see.
+    _, err = _call(mcp_client, "get_concept", {"concept_id": hidden_old_id})
+    assert err is not None and "finns inte" in err

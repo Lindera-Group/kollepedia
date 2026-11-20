@@ -6,7 +6,8 @@ question gives the same concepts in the same order whichever way it is asked.
 
 Order: exact name first, then names that start with the query, names that
 contain it, and last the concepts where only the definition matches;
-alphabetical within each band. Equal names — the same term in several
+alphabetical within each band. Case is ignored, for Å Ä Ö as for A–Z
+(db.fold_all_letters). Equal names — the same term in several
 collections, or twice in one — come in the order they entered the bank (the
 main branch's creation time), with the concept id as the final word. The
 order is therefore total: paging neither repeats nor skips an entry, and two

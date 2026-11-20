@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app import ratelimit
-from app.db import get_db
+from app.db import fold_all_letters, get_db
 from app.main import app
 from app.models import Base, Collection
 
@@ -64,6 +64,7 @@ def engine():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+    fold_all_letters(engine)
     Base.metadata.create_all(bind=engine)
     yield engine
     engine.dispose()

@@ -5,6 +5,22 @@ den första releasen när betan är över. Noterna här speglar GitHub-releasern
 Prototypen v1 (0.5.0–0.10.0, 2024–2026) har sin egen logg i Linderå Groups
 arbetsrepo.
 
+## ng-v0.8.5 – 2026-11-20
+
+Länkarna i definitionerna leder rätt även för den som läser Kollepedia över MCP, och sökningen gör ingen skillnad på stora och små Å, Ä och Ö.
+
+### Rättat
+- **MCP-verktygen `get_concept` och `get_concept_history` följer länkarna i definitionerna.** Importerade definitioner länkar med prototypens id:n. Sajten har hela tiden översatt dem till rätt begrepp, men MCP-verktygen svarade "finns inte" – i praktiken för varje länk i en definition i de publika samlingarna. Nu ger de samma begrepp som sajten, under begreppets riktiga id.
+- **Uppslaget är definierat på ett ställe.** `graph.find_concept` i `server/app/graph.py` översätter prototypens id:n för både sajtens API och MCP-verktygen, så att de inte kan glida isär. Synlighetsregeln är oförändrad: ett gammalt id öppnar aldrig en samling som läsaren inte får se.
+- **Sökningen skiljer inte på stora och små Å, Ä och Ö.** En sökning på *ÅTERBETALNING* gav inga träffar medan *återbetalning* gav en, eftersom databasen bara jämställde stora och små bokstäver inom A–Z. Nu ger sökfältet på sajten och MCP-verktyget `search_concepts` samma träffar hur sökordet än är skrivet. Detsamma gäller serverns övriga jämförelser som bortser från skiftläge, till exempel sökningen efter användare.
+- **Sexton länkar till *fordonspass* i Kollektivtrafikordboken leder rätt.** De pekade på ett id utan begrepp och gav 404 på sajten. Nu leder de till posten *Fordonpass* (engelska *Block*), som är den definitionerna avser.
+
+### Innehåll
+- **Manualen** nämner, på svenska och engelska, att sökningen inte skiljer på stora och små bokstäver.
+
+### Drift
+- **Migrering 019** (`server/scripts/migrate_019_fordonspass_alias.py`) lägger aliaset för *fordonspass* och körs av sig själv när servercontainern startar. En databas utan posten lämnas orörd.
+
 ## ng-v0.8.4 – 2026-11-19
 
 MCP-sökningen ger träffarna i samma ordning som sökfältet på sajten.

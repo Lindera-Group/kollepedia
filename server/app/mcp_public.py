@@ -87,7 +87,9 @@ def _collection_out(db: Session, c: Collection, count: int) -> dict[str, Any]:
 
 
 def _public_concept(db: Session, concept_id: str) -> Concept:
-    concept = db.get(Concept, concept_id)
+    """A concept the anonymous reader may see. Prototype term ids, which the
+    links in imported definitions carry, resolve as they do on the site."""
+    concept = graph.find_concept(db, concept_id)
     if concept is None or not can_view_collection(None, concept.collection):
         raise ValueError(f"Begreppet {concept_id} finns inte.")
     return concept
