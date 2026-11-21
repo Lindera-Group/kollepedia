@@ -42,6 +42,12 @@ def in_collections(query: Query, collection: str | None) -> Query:
     return query.filter(Collection.slug.in_(slugs)) if slugs else query
 
 
+def in_language(query: Query, language: str | None) -> Query:
+    """Narrow a head_query to the concepts whose current text is in one
+    language ("sv", "en")."""
+    return query.filter(Version.language == language) if language else query
+
+
 def text_search(query: Query, q: str | None) -> tuple[Query, tuple[ColumnElement, ...]]:
     """Narrow a head_query to the concepts whose name or definition contains
     `q`, and return it with the ORDER BY that belongs to it (module docstring).

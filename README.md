@@ -83,6 +83,9 @@ Verktygen är `list_collections`, `get_collection`, `search_concepts`,
 `get_concept` och `get_concept_history`. Samlingar vars licens inte tillåter
 vidarespridning är sökbara men inte exporterbara, och verktygen säger det.
 `search_concepts` ger träffarna i samma ordning som sökfältet på sajten.
+Verktygen hanterar båda språken: ett begrepp och dess motsvarighet på det
+andra språket är länkade som översättningar, som följer med i sökträffarna
+och i `get_concept`, och `search_concepts` kan begränsas med `language`.
 Inloggad åtkomst (skrivningar, privata samlingar) med personliga API-nycklar
 är nästa steg. Implementationen är `server/app/mcp_public.py`;
 `server/mcp_server.py` är en stdio-variant för lokal utveckling.

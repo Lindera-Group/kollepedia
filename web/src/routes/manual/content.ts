@@ -938,7 +938,18 @@ export const manual: Record<Lang, ManualContent> = {
           <code>get_concept</code> och <code>get_concept_history</code>; samlingar utan
           vidarespridningsrätt är sökbara men märks som icke exporterbara.
           <code>search_concepts</code> ger träffarna i samma ordning som sökfältet på
-          sajten. Inloggad åtkomst med skrivningar kommer i ett senare steg. Registrera
+          sajten. Inloggad åtkomst med skrivningar kommer i ett senare steg.
+        </p>
+        <p>
+          Verktygen hanterar båda språken. Ett begrepp på svenska och dess motsvarighet
+          på engelska är två begrepp som är länkade som översättningar: varje sökträff
+          anger sina översättningar, <code>get_concept</code> ger dem med definition, och
+          <code>search_concepts</code> kan begränsas till ett språk med
+          <code>language</code> (<code>sv</code> eller <code>en</code>). En term som
+          förekommer flera gånger i samma samling, med olika betydelser, skiljs åt av
+          översättningarna. Relationerna till andra samlingar anger vilket språk begreppet
+          i andra änden är skrivet på, så att en agent kan följa ett svenskt begrepp till
+          dess engelska motsvarighet och vidare till exempelvis Transmodel. Registrera
           servern:
         </p>
         <pre class="ui" tabindex="0" role="region" aria-label="Kommandorad för MCP-registrering"><code>claude mcp add --transport http kollepedia https://kollepedia.se/mcp</code></pre>
@@ -1905,8 +1916,18 @@ export const manual: Record<Lang, ManualContent> = {
           <code>get_concept</code> and <code>get_concept_history</code>; collections without
           redistribution rights are searchable but marked as not exportable.
           <code>search_concepts</code> returns hits in the same order as the search field
-          on the site. Signed-in access with writes comes in a later step. Register the
-          server:
+          on the site. Signed-in access with writes comes in a later step.
+        </p>
+        <p>
+          The tools handle both languages. A concept in Swedish and its counterpart in
+          English are two concepts linked as translations: every search hit names its
+          translations, <code>get_concept</code> returns them with their definitions, and
+          <code>search_concepts</code> can be narrowed to one language with
+          <code>language</code> (<code>sv</code> or <code>en</code>). A term that occurs
+          several times in one collection, with different meanings, is told apart by its
+          translations. Relations to other collections state the language of the concept
+          at the other end, so an agent can follow a Swedish concept to its English
+          counterpart and on to, for example, Transmodel. Register the server:
         </p>
         <pre class="ui" tabindex="0" role="region" aria-label="Command line for MCP registration"><code>claude mcp add --transport http kollepedia https://kollepedia.se/mcp</code></pre>
         <p>

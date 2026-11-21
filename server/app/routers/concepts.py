@@ -169,8 +169,7 @@ def list_concepts(
     # Which concepts match and in what order is defined in app/search.py,
     # shared with the public MCP tool search_concepts.
     query = search.in_collections(search.head_query(db, user), collection)
-    if language:
-        query = query.filter(Version.language == language)
+    query = search.in_language(query, language)
     if status:
         statuses = [s.strip() for s in status.split(",") if s.strip()]
         # 'endorsed' is no longer a version status (rework 2026-07-11) — the
@@ -270,7 +269,8 @@ def list_concepts(
     return schemas.ConceptListOut(items=items, total=total)
 
 
-def _relations_for(db: Session, concept: Concept) -> list[schemas.RelationOut]:
+def _relations_for(db: Session, concept: Concept, user: User | None) -> list[schemas.RelationOut]:
+    """The concept's relations whose other end `user` may see."""
     relations = (
         db.query(ConceptRelation)
         .filter(
@@ -286,7 +286,7 @@ def _relations_for(db: Session, concept: Concept) -> list[schemas.RelationOut]:
         direction = "out" if rel.from_concept_id == concept.id else "in"
         other_id = rel.to_concept_id if direction == "out" else rel.from_concept_id
         other = db.get(Concept, other_id)
-        if other is None:
+        if other is None or not can_view_collection(user, other.collection):
             continue
         head = graph.head_of(db, other)
         out.append(
@@ -303,44 +303,20 @@ def _relations_for(db: Session, concept: Concept) -> list[schemas.RelationOut]:
     return out
 
 
-def _translations_for(db: Session, concept: Concept) -> list[schemas.TranslationOut]:
-    """Translations = translated_from edges touching any of this concept's versions."""
-    version_ids = [v.id for v in concept.versions]
-    if not version_ids:
-        return []
-    edges = (
-        db.query(VersionEdge)
-        .filter(
-            VersionEdge.edge_type == "translated_from",
-            or_(
-                VersionEdge.child_id.in_(version_ids),
-                VersionEdge.parent_id.in_(version_ids),
-            ),
+def _translations_for(
+    db: Session, concept: Concept, user: User | None
+) -> list[schemas.TranslationOut]:
+    """The concept's translations (graph.translations_of) that `user` may see."""
+    return [
+        schemas.TranslationOut(
+            concept_id=other.id,
+            version_id=shown.id,
+            language=shown.language,
+            canonical_form=shown.canonical_form,
         )
-        .all()
-    )
-    seen: set[str] = set()
-    out: list[schemas.TranslationOut] = []
-    for edge in edges:
-        local = edge.child_id in version_ids
-        other_version = db.get(Version, edge.parent_id if local else edge.child_id)
-        if other_version is None or other_version.concept_id == concept.id:
-            continue
-        if other_version.concept_id in seen:
-            continue
-        seen.add(other_version.concept_id)
-        other_concept = db.get(Concept, other_version.concept_id)
-        head = graph.head_of(db, other_concept) if other_concept else None
-        shown = head or other_version
-        out.append(
-            schemas.TranslationOut(
-                concept_id=other_version.concept_id,
-                version_id=shown.id,
-                language=shown.language,
-                canonical_form=shown.canonical_form,
-            )
-        )
-    return out
+        for other, shown in graph.translations_of(db, [concept.id]).get(concept.id, [])
+        if can_view_collection(user, other.collection)
+    ]
 
 
 def _concept_counters(db: Session, concept: Concept, user: User | None) -> dict[str, int]:
@@ -446,8 +422,8 @@ def get_concept(
             schemas.BranchOut(id=b.id, name=b.name, head_version_id=b.head_version_id)
             for b in concept.branches
         ],
-        relations=_relations_for(db, concept),
-        translations=_translations_for(db, concept),
+        relations=_relations_for(db, concept, user),
+        translations=_translations_for(db, concept, user),
         version_count=len(concept.versions),
         watching=watching,
         taxonomies=_taxonomies_for(db, concept),

@@ -17,7 +17,7 @@ from starlette.applications import Starlette
 from starlette.routing import Route
 
 from app import graph, mcp_public
-from app.models import Collection, LegacyId
+from app.models import Collection, ConceptRelation, LegacyId
 from tests.test_api import _create_concept
 from tests.test_search import _age_main_branch
 
@@ -220,3 +220,122 @@ def test_prototype_ids_in_definition_links_resolve_like_on_the_site(
     # An alias never opens a collection the anonymous reader cannot see.
     _, err = _call(mcp_client, "get_concept", {"concept_id": hidden_old_id})
     assert err is not None and "finns inte" in err
+
+
+def _translation(client, collection_id, source: dict, form: str, definition: str) -> dict:
+    """An English concept linked to `source` as its translation."""
+    return _create_concept(
+        client,
+        collection_id,
+        form=form,
+        definition=definition,
+        language="en",
+        translated_from_version_id=source["head"]["id"],
+    )
+
+
+def test_translations_tell_same_named_concepts_apart(mcp_client, mcp_db, client, db, collection):
+    """A bilingual glossary holds one concept per language and links the pair.
+    The term alone does not identify a concept — the same Swedish word is
+    there once per English counterpart — so every search hit names its
+    translations, and get_concept carries them with their definitions."""
+    sv_cluster = _create_concept(
+        client, collection.id, form="Hållplatsområde", definition="Grupp av hållplatser."
+    )
+    en_cluster = _translation(
+        client, collection.id, sv_cluster, "Stop cluster", "A group of stops."
+    )
+    sv_area = _create_concept(
+        client, collection.id, form="Hållplatsområde", definition="Område kring en hållplats."
+    )
+    en_area = _translation(client, collection.id, sv_area, "Stop area", "The area around a stop.")
+
+    hits, err = _call(mcp_client, "search_concepts", {"q": "hållplatsområde"})
+    assert err is None
+    assert {h["id"]: h["translations"] for h in hits} == {
+        sv_cluster["id"]: [
+            {"id": en_cluster["id"], "canonical_form": "Stop cluster", "language": "en"}
+        ],
+        sv_area["id"]: [{"id": en_area["id"], "canonical_form": "Stop area", "language": "en"}],
+    }
+
+    # The link reads the same from the other end.
+    hits, err = _call(mcp_client, "search_concepts", {"q": "stop cluster"})
+    assert err is None and [h["id"] for h in hits] == [en_cluster["id"]]
+    assert hits[0]["translations"] == [
+        {"id": sv_cluster["id"], "canonical_form": "Hållplatsområde", "language": "sv"}
+    ]
+
+    detail, err = _call(mcp_client, "get_concept", {"concept_id": sv_area["id"]})
+    assert err is None
+    assert detail["translations"] == [
+        {
+            "id": en_area["id"],
+            "canonical_form": "Stop area",
+            "language": "en",
+            "definition_md": "The area around a stop.",
+            "collection_slug": collection.slug,
+            "url": f"{mcp_public.public_origin()}/concepts/{en_area['id']}",
+        }
+    ]
+
+
+def test_search_narrows_to_one_language_like_the_site(mcp_client, mcp_db, client, collection):
+    sv = _create_concept(client, collection.id, form="Linje", definition="En sträcka.")
+    en = _translation(client, collection.id, sv, "Line", "Called linje in Swedish.")
+
+    def site(**params) -> list[str]:
+        resp = client.get("/api/v1/concepts", params=params, headers={"X-User": ""})
+        assert resp.status_code == 200, resp.text
+        return [item["id"] for item in resp.json()["items"]]
+
+    def over_mcp(**arguments) -> list[str]:
+        hits, err = _call(mcp_client, "search_concepts", arguments)
+        assert err is None
+        return [h["id"] for h in hits]
+
+    assert over_mcp(q="linje") == site(q="linje") == [sv["id"], en["id"]]
+    assert over_mcp(q="linje", language="sv") == site(q="linje", language="sv") == [sv["id"]]
+    assert over_mcp(q="linje", language="en") == site(q="linje", language="en") == [en["id"]]
+
+
+def test_translations_and_relations_stay_within_what_the_public_may_see(
+    mcp_client, mcp_db, client, db, collection
+):
+    """A translation in a collection the anonymous reader cannot see is not
+    named; a relation across collections says which language its other end
+    is in, so a mapping between languages is visible as one."""
+    private = Collection(slug="intern-lista", name="Intern lista")
+    standard = Collection(slug="standarden", name="Standarden")
+    db.add_all([private, standard])
+    db.commit()
+    sv = _create_concept(client, collection.id, form="Hållplats", definition="En plats.")
+    hidden = _translation(client, private.id, sv, "Internal stop", "Hidden.")
+    mapped = _create_concept(
+        client, standard.id, form="Stop place", definition="A place.", language="en"
+    )
+    db.add(
+        ConceptRelation(
+            relation_type="exact_match", from_concept_id=sv["id"], to_concept_id=mapped["id"]
+        )
+    )
+    private.visibility = "org_private"
+    db.commit()
+
+    detail, err = _call(mcp_client, "get_concept", {"concept_id": sv["id"]})
+    assert err is None
+    assert detail["translations"] == []
+    assert detail["relations"] == [
+        {
+            "relation_type": "exact_match",
+            "direction": "out",
+            "concept_id": mapped["id"],
+            "canonical_form": "Stop place",
+            "language": "en",
+            "collection_slug": "standarden",
+        }
+    ]
+
+    hits, err = _call(mcp_client, "search_concepts", {"q": "hållplats"})
+    assert err is None and [h["translations"] for h in hits] == [[]]
+    assert hidden["id"] not in json.dumps(detail)

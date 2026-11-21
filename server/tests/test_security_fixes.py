@@ -9,9 +9,12 @@ Täcker de behörighetsgap som kodgenomgången pekade ut:
 samling som kan göras org_private).
 """
 
+from app.models import ConceptRelation
 from tests.test_night4 import (
     ANON,
     _bearer,
+    _create_collection,
+    _create_concept,
     _org_setup,
     _register,
 )
@@ -154,3 +157,45 @@ def test_ai_extract_requires_login(client):
         ).status_code
         == 401
     )
+
+
+# ── Begreppssidan: länkar in i samlingar läsaren inte får se ─────────────────
+
+
+def test_concept_names_only_relations_and_translations_the_reader_may_see(client, db):
+    """A public concept related to, or translated by, a concept in an
+    org-private collection: the relation and the translation are the members'
+    to see. Everyone else gets neither the term nor the id."""
+    root, anna, cesar, bertil, coll, internal = _org_setup(client)
+    public = _create_collection(
+        client, anna, slug="oppen-lista", organisation_id=coll["organisation"]["id"]
+    )
+    shown = _create_concept(client, public["id"], form="resa", headers=_bearer(anna)).json()
+    translation = _create_concept(
+        client,
+        coll["id"],
+        form="internal journey",
+        language="en",
+        translated_from_version_id=shown["head"]["id"],
+        headers=_bearer(anna),
+    ).json()
+    db.add(
+        ConceptRelation(
+            relation_type="related_to", from_concept_id=shown["id"], to_concept_id=internal["id"]
+        )
+    )
+    db.commit()
+    _make_org_private(client, coll, anna)
+
+    def linked(headers) -> tuple[list[str], list[str]]:
+        resp = client.get(f"/api/v1/concepts/{shown['id']}", headers=headers)
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        return (
+            [r["other_concept_id"] for r in body["relations"]],
+            [t["concept_id"] for t in body["translations"]],
+        )
+
+    assert linked(_bearer(cesar)) == ([internal["id"]], [translation["id"]])
+    assert linked(_bearer(bertil)) == ([], [])
+    assert linked(ANON) == ([], [])

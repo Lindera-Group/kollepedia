@@ -37,7 +37,17 @@ mcp = FastMCP(
         "Kollepedia är kollektivtrafikens gemensamma begreppsbank (svenska och "
         "engelska). Sök begrepp, läs definitioner med proveniens och versionshistorik, "
         "och se hur samlingar (Transmodel, NeTEx, SUTI, NOPTIS, Kollektivtrafikordboken …) "
-        "relaterar. Allt här är publikt och skrivskyddat."
+        "relaterar. Allt här är publikt och skrivskyddat.\n\n"
+        "Språk: varje begrepp har ett språk (language: sv eller en). Samma begrepp på "
+        "ett annat språk är ett eget begrepp med egen definition, länkat som översättning "
+        "(translations i sökträffar och i get_concept). Samma term kan finnas flera "
+        "gånger i en samling med olika översättningar; då är det översättningen som "
+        "skiljer betydelserna åt. Motsvarigheter mellan samlingar – till exempel mot "
+        "Transmodel, som bara finns på engelska – står som relationer (exact_match, "
+        "close_match, broader, related_to), och varje relation anger språket i andra "
+        "änden. För att harmonisera ett begrepp mellan språk: sök termen, följ "
+        "translations till motsvarigheten, och följ dess relationer eller sök dess "
+        "term i målsamlingen (search_concepts med collection och language)."
     ),
     stateless_http=True,
     json_response=True,
@@ -132,10 +142,24 @@ def _relations(db: Session, concept: Concept) -> list[dict[str, Any]]:
                 "direction": "out" if rel.from_concept_id == concept.id else "in",
                 "concept_id": other.id,
                 "canonical_form": head.canonical_form if head else None,
+                "language": head.language if head else None,
                 "collection_slug": other.collection.slug,
             }
         )
     return out
+
+
+def _public_translations(
+    db: Session, concept_ids: list[str]
+) -> dict[str, list[tuple[Concept, Version]]]:
+    """graph.translations_of, without the concepts the anonymous reader may
+    not see."""
+    return {
+        concept_id: [
+            (other, shown) for other, shown in found if can_view_collection(None, other.collection)
+        ]
+        for concept_id, found in graph.translations_of(db, concept_ids).items()
+    }
 
 
 # ── Tools ────────────────────────────────────────────────────────────────
@@ -183,20 +207,28 @@ def get_collection(slug: str) -> dict[str, Any]:
 
 @mcp.tool()
 def search_concepts(
-    q: str, collection: str | None = None, limit: int = 20
+    q: str, collection: str | None = None, language: str | None = None, limit: int = 20
 ) -> list[dict[str, Any]]:
     """Search public concepts by term or definition text (current head
-    versions). Hits come in the same order as in the search field on the
-    site: the exact term first, then terms that start with the query, terms
-    that contain it, and last concepts where only the definition matches;
-    alphabetical within each group. `collection` narrows to one collection
-    slug (or several, comma-separated); `limit` ≤ 100."""
+    versions), in Swedish and English alike. Hits come in the same order as
+    in the search field on the site: the exact term first, then terms that
+    start with the query, terms that contain it, and last concepts where only
+    the definition matches; alphabetical within each group. `collection`
+    narrows to one collection slug (or several, comma-separated); `language`
+    to concepts written in "sv" or "en"; `limit` ≤ 100.
+
+    Each hit names its `translations`: the same concept in the other
+    language, a concept of its own to read with get_concept. A term that
+    comes back several times from one collection is one concept per meaning;
+    the translations tell them apart."""
     limit = max(1, min(int(limit), 100))
     with SessionLocal() as db:
         # The matching and the order are the site's own (app/search.py).
         query = search.in_collections(search.head_query(db, None), collection)
+        query = search.in_language(query, language)
         query, order = search.text_search(query, q)
         rows = query.order_by(*order).limit(limit).all()
+        translations = _public_translations(db, [concept.id for concept, _, _ in rows])
         return [
             {
                 "id": concept.id,
@@ -206,6 +238,14 @@ def search_concepts(
                 "status": head.status,
                 "collection_slug": coll.slug,
                 "url": f"{public_origin()}/concepts/{concept.id}",
+                "translations": [
+                    {
+                        "id": other.id,
+                        "canonical_form": shown.canonical_form,
+                        "language": shown.language,
+                    }
+                    for other, shown in translations.get(concept.id, [])
+                ],
             }
             for concept, head, coll in rows
         ]
@@ -213,8 +253,14 @@ def search_concepts(
 
 @mcp.tool()
 def get_concept(concept_id: str) -> dict[str, Any]:
-    """A public concept's current definition with tags, relations to other
-    public concepts, and its version count."""
+    """A public concept's current definition with tags, its translations,
+    relations to other public concepts, and its version count.
+
+    `translations` are the same concept in the other language, each with its
+    own definition: what the term is called there and how it is defined.
+    `relations` are typed links to other concepts (exact_match, close_match,
+    broader, related_to), within and across collections; each gives the
+    language of the concept at the other end."""
     with SessionLocal() as db:
         concept = _public_concept(db, concept_id)
         head = graph.head_of(db, concept)
@@ -222,6 +268,17 @@ def get_concept(concept_id: str) -> dict[str, Any]:
         out["version_count"] = (
             db.query(func.count(Version.id)).filter(Version.concept_id == concept.id).scalar() or 0
         )
+        out["translations"] = [
+            {
+                "id": other.id,
+                "canonical_form": shown.canonical_form,
+                "language": shown.language,
+                "definition_md": shown.definition_md,
+                "collection_slug": other.collection.slug,
+                "url": f"{public_origin()}/concepts/{other.id}",
+            }
+            for other, shown in _public_translations(db, [concept.id]).get(concept.id, [])
+        ]
         out["relations"] = _relations(db, concept)
         return out
 

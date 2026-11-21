@@ -7,9 +7,11 @@ All version creation flows through here. Invariants enforced:
 - 'revise' requires the base to be a branch head (branch-and-reconcile, §4.5).
 """
 
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from .annotations import remap_annotations
@@ -303,6 +305,55 @@ def head_of(db: Session, concept: Concept, branch_name: str = "main") -> Version
     if branch is None or branch.head_version_id is None:
         return None
     return db.get(Version, branch.head_version_id)
+
+
+def translations_of(
+    db: Session, concept_ids: Iterable[str]
+) -> dict[str, list[tuple[Concept, Version]]]:
+    """Per concept, its translations: the concepts joined to any of its
+    versions by a translated_from edge, in either direction, each with the
+    version that speaks for it (its main head; the linked version if it has
+    none). Ordered by language and name; a concept without translations has
+    no entry. Visibility is the caller's to check."""
+    own = dict(
+        db.query(Version.id, Version.concept_id)
+        .filter(Version.concept_id.in_(list(concept_ids)))
+        .all()
+    )
+    if not own:
+        return {}
+    edges = (
+        db.query(VersionEdge.child_id, VersionEdge.parent_id)
+        .filter(
+            VersionEdge.edge_type == "translated_from",
+            or_(VersionEdge.child_id.in_(list(own)), VersionEdge.parent_id.in_(list(own))),
+        )
+        .all()
+    )
+    # (concept, version at the other end of one of its edges)
+    links: set[tuple[str, str]] = set()
+    for child_id, parent_id in edges:
+        for local_id, other_id in ((child_id, parent_id), (parent_id, child_id)):
+            if local_id in own:
+                links.add((own[local_id], other_id))
+    linked = {
+        v.id: v
+        for v in db.query(Version).filter(Version.id.in_({other for _, other in links})).all()
+    }
+    out: dict[str, list[tuple[Concept, Version]]] = {}
+    paired: set[tuple[str, str]] = set()
+    for concept_id, other_id in sorted(links):
+        version = linked.get(other_id)
+        if version is None or version.concept_id == concept_id:
+            continue
+        if (concept_id, version.concept_id) in paired:
+            continue
+        paired.add((concept_id, version.concept_id))
+        other = db.get(Concept, version.concept_id)
+        out.setdefault(concept_id, []).append((other, head_of(db, other) or version))
+    for translations in out.values():
+        translations.sort(key=lambda t: (t[1].language, t[1].canonical_form, t[0].id))
+    return out
 
 
 def find_concept(db: Session, concept_id: str) -> Concept | None:

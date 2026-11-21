@@ -122,9 +122,18 @@ samma process som API:et, med samma synlighetsregel som en anonym besökare:
 `get_concept_history`. `mcp_server.py` i serverroten är en stdio-variant för
 lokal utveckling.
 
+Språk: ett begrepp har ett språk, och samma begrepp på ett annat språk är ett
+eget begrepp som är länkat med en `translated_from`-kant. `graph.translations_of`
+är det enda stället som läser de kanterna åt en läsare; begreppssidans API och
+MCP-verktygen (`translations` i sökträffar och i `get_concept`) bygger på den
+och visar bara de översättningar läsaren får se. Detsamma gäller relationerna:
+ett begrepp i en samling som läsaren inte får se nämns varken med benämning
+eller id. MCP-relationerna anger språket i andra änden.
+
 Vad som träffar en sökning och i vilken ordning står på ett ställe,
 `app/search.py`, som både `GET /concepts` (sajtens sökfält och bläddringslista)
-och MCP-verktyget `search_concepts` bygger sin fråga med. Ordningen är exakt
+och MCP-verktyget `search_concepts` bygger sin fråga med, språkfiltret
+(`language`) inräknat. Ordningen är exakt
 benämning, benämning som börjar med sökordet, benämning som innehåller det och
 sist träff enbart i definitionen; bokstavsordning inom varje grupp, och lika
 benämningar i den ordning begreppen lades in (huvudgrenens skapelsetid, sist

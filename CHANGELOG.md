@@ -5,6 +5,24 @@ den första releasen när betan är över. Noterna här speglar GitHub-releasern
 Prototypen v1 (0.5.0–0.10.0, 2024–2026) har sin egen logg i Linderå Groups
 arbetsrepo.
 
+## ng-v0.8.6 – 2026-11-21
+
+MCP-verktygen hanterar båda språken: sökträffar och begrepp visar sina översättningar, och sökningen kan begränsas till ett språk. Begreppssidan namnger inte längre begrepp i samlingar som läsaren inte får se.
+
+### Innehåll
+- **Sökträffar över MCP anger sina översättningar.** Ett begrepp på svenska och dess motsvarighet på engelska är två begrepp som är länkade som översättningar. `search_concepts` anger nu för varje träff vad begreppet heter på det andra språket. En term som finns flera gånger i en samling med olika betydelser går därmed att skilja åt: *Hållplatsområde* finns tre gånger i Kollektivtrafikordboken, som *Stop cluster*, *Place* och *Stop area*.
+- **`search_concepts` kan begränsas till ett språk** med parametern `language` (`sv` eller `en`), samma filter som sajtens sökning använder.
+- **`get_concept` ger översättningarna med definition**, samling och länk, så att definitionerna på de två språken kan jämföras i ett anrop. Relationerna anger vilket språk begreppet i andra änden är skrivet på.
+- **MCP-serverns instruktioner beskriver språkmodellen** och hur ett begrepp harmoniseras mellan språk och samlingar: sök termen, följ översättningen, och följ dess relationer eller sök dess term i målsamlingen.
+- **Manualen** beskriver språkstödet i MCP-verktygen, på svenska och engelska.
+
+### Rättat
+- **Begreppssidan namnger inte begrepp som läsaren inte får se.** `GET /api/v1/concepts/{id}` listade relationer och översättningar utan att pröva om läsaren får se begreppet i andra änden. Ett publikt begrepp med en relation till ett begrepp i en organisationsintern samling visade därför det begreppets benämning, id och samling för alla. Definitionen visades inte. Nu följer relationerna och översättningarna samma synlighetsregel som begreppen själva: organisationens medlemmar ser dem, övriga inte. MCP-verktygen har hela tiden filtrerat så.
+- **Översättningarna läses på ett ställe.** `graph.translations_of` i `server/app/graph.py` läser översättningslänkarna för både sajtens API och MCP-verktygen, och språkfiltret ligger i `server/app/search.py`, så att de inte kan glida isär.
+
+### Drift
+- Ingen migrering och inga nya miljövariabler.
+
 ## ng-v0.8.5 – 2026-11-20
 
 Länkarna i definitionerna leder rätt även för den som läser Kollepedia över MCP, och sökningen gör ingen skillnad på stora och små Å, Ä och Ö.

@@ -54,7 +54,7 @@ API_PREFIX = "/api/v1"
 app = FastAPI(
     title="Kollepedia NG",
     description="Versioned, provenance-first terminology for public transport.",
-    version="0.8.5",
+    version="0.8.6",
     lifespan=lifespan,
     # The OpenAPI schema and the interactive docs live under the API prefix so
     # they pass through the same-origin /api proxy in web/src/hooks.server.ts
